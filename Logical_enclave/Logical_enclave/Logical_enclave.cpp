@@ -83,7 +83,10 @@ uint32_t AES_Decryptcbc(uint8_t* key, size_t len, uint8_t *Entext, uint8_t *plai
 	free(pCtx);
 	return re;
 }
-std::map<int,uint8_t*> *userfile = new std::map<int,uint8_t*>;
+typedef struct shuju {
+	uint8_t data[1024];
+};
+std::map<int,shuju*> *userfile = new std::map<int,shuju*>;
 std::queue<int> *FIFOqueue = new std::queue<int>;//用于保存FIFO的顺序，目前设置缓存为10000个文件
 typedef struct Tofileenclave {
 	int dataid;
@@ -98,26 +101,25 @@ uint32_t FindfileTOuser(uint8_t* data, size_t len, uint8_t *Enuserdata, size_t l
 	memcpy(&tamp, getendatafromenclave1, sizeof(Tofileenclave));
 	delete[] getendatafromenclave1;
 	if (userfile->find(tamp.dataid) == userfile->end()) {
-		uint8_t *usershuju = new uint8_t[1024];
-		memset(usershuju, 0, 1024);
-		Encryptusershuju(&re, tamp.dataid, usershuju, 1024);
+		shuju *usershuju = new shuju;
+		Encryptusershuju(&re, tamp.dataid, usershuju->data, 1024);
 		if (re != 0) return re;
 		if (FIFOqueue->size() <= 10000) {
 			FIFOqueue->push(tamp.dataid);
-			userfile->insert(std::pair<int, uint8_t*>(tamp.dataid, usershuju));
+			userfile->insert(std::pair<int, shuju*>(tamp.dataid, usershuju));
 		}
 		else
 		{
 			int topid = FIFOqueue->front();
 			FIFOqueue->pop();
 			userfile->erase(topid);
-			userfile->insert(std::pair<int, uint8_t*>(tamp.dataid, usershuju));
+			userfile->insert(std::pair<int, shuju*>(tamp.dataid, usershuju));
 		}
-		re = AES_Encryptcbc(tamp.userkey.s, SGX_ECP256_KEY_SIZE, usershuju, 1024, Enuserdata);
+		re = AES_Encryptcbc(tamp.userkey.s, SGX_ECP256_KEY_SIZE, usershuju->data, 1024, Enuserdata);
 	}
 	else 
 	{
-		re = AES_Encryptcbc(tamp.userkey.s, SGX_ECP256_KEY_SIZE, userfile->find(tamp.dataid)->second, 1024, Enuserdata);
+		re = AES_Encryptcbc(tamp.userkey.s, SGX_ECP256_KEY_SIZE, userfile->find(tamp.dataid)->second->data, 1024, Enuserdata);
 	}
 	return re;
 }

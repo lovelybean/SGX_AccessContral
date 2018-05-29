@@ -26,16 +26,16 @@ ORAM_envalve.cpp(620): warning C4200: 使用了非标准扩展: 结构/联合中
   ORAM_envalve.cpp(620): note: 默认构造函数或 copy/move 赋值运算符将忽略此成员
 ORAM_envalve.cpp(671): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
 ORAM_envalve.cpp(685): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
-ORAM_envalve.cpp(765): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
-ORAM_envalve.cpp(797): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(764): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
+ORAM_envalve.cpp(796): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(801): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
 ORAM_envalve.cpp(802): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-ORAM_envalve.cpp(803): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-ORAM_envalve.cpp(815): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(814): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(819): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
 ORAM_envalve.cpp(820): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-ORAM_envalve.cpp(821): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-ORAM_envalve.cpp(1065): warning C4091: “typedef ”: 没有声明变量时忽略“Tofileenclave”的左侧
-ORAM_envalve.cpp(1100): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
-ORAM_envalve.cpp(1130): warning C4267: “初始化”: 从“size_t”转换到“uint32_t”，可能丢失数据
+ORAM_envalve.cpp(1064): warning C4091: “typedef ”: 没有声明变量时忽略“Tofileenclave”的左侧
+ORAM_envalve.cpp(1099): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(1129): warning C4267: “初始化”: 从“size_t”转换到“uint32_t”，可能丢失数据
   正在生成代码...
 e:\oram_envalve\oram_envalve\oram_envalve.cpp(593): warning C4715: “Buildsecurepath”: 不是所有的控件路径都返回值
   ORAM_envalve_t.c

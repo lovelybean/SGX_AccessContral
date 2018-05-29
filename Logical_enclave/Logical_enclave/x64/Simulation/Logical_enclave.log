@@ -7,7 +7,8 @@ Logical_enclave.cpp(64): warning C4267: “参数”: 从“size_t”转换到�
 Logical_enclave.cpp(76): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
 Logical_enclave.cpp(81): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
 Logical_enclave.cpp(82): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-Logical_enclave.cpp(91): warning C4091: “typedef ”: 没有声明变量时忽略“Tofileenclave”的左侧
+Logical_enclave.cpp(88): warning C4091: “typedef ”: 没有声明变量时忽略“shuju”的左侧
+Logical_enclave.cpp(94): warning C4091: “typedef ”: 没有声明变量时忽略“Tofileenclave”的左侧
   Logical_enclave_t.c
     正在创建库 E:\ORAM\x64\Simulation\Logical_enclave.lib 和对象 E:\ORAM\x64\Simulation\Logical_enclave.exp
   Logical_enclave.vcxproj -> E:\ORAM\x64\Simulation\Logical_enclave.dll

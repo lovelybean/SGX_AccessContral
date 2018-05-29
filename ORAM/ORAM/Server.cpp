@@ -398,11 +398,9 @@ int Createcounter(sgx_enclave_id_t eid) {
 			fs.flush();
 			fs.close();
 			printf("\n创建Vcount成功\n");
-			sgx_destroy_enclave(eid);
 			return 1;
 		}
 	}
-	//sgx_destroy_enclave(eid);
 	return 0;
 }
 //更新全局计数器Vcount
@@ -489,23 +487,20 @@ void getProxycon(sgx_enclave_id_t eid)
 
 			uint8_t *outdata = new uint8_t[20+datasize + 560];
 			memset(outdata,0, 20 + datasize + 560);
-			
 			sgx_status_t       ret = SGX_SUCCESS;
 			uint32_t id = 0;
 			if (ret == SGX_SUCCESS)
 			{
-				sgx_enclave_id_t tid;
-				sgx_launch_token_t token = { 0 };
-				int updated = 0;
-				ret = sgx_create_enclave(ENCLAVE_FILE, SGX_DEBUG_FLAG, &token, &updated, &tid, NULL);
+				
+				
 				ret = SGX_ERROR_UNEXPECTED;
 				sgx_ps_cap_t ps_cap;
 				memset(&ps_cap, 0, sizeof(sgx_ps_cap_t));
 				ret = sgx_get_ps_cap(&ps_cap);
 				size_t p2slen = P2SDATA + datasize;
 				size_t outdatalen = datasize + SaveDatasize;
-				DetectacData(tid, &id, p2s,p2slen, outdata,outdatalen );
-				sgx_destroy_enclave(tid);
+				DetectacData(eid, &id, p2s,p2slen, outdata,outdatalen );
+				
 				if (id != -1)
 				{
  					std::fstream fs;

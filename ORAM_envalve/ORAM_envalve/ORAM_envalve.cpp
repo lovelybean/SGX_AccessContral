@@ -707,7 +707,6 @@ int Decryptcount(uint8_t *data)
 }
 uint32_t DetectacData(uint8_t *data, size_t len,uint8_t * Endata,size_t outlen)
 {
-	printint(2);
 	uint32_t ret = 0;
 	pd *p2data;
 	do {
@@ -1152,7 +1151,7 @@ int GetdatatoClient(int ID,uint8_t* data, size_t len, uint8_t* Enuserdata, size_
 		delete pldata;
 		uint32_t mc_value = 0;
 		re = GetUscount(&userac->mc, &mc_value);
-		printint(mc_value);
+		//printint(mc_value);
 		GlobalCountManagement->insert(pair<int, sgx_mc_uuid_t>(ID, userac->mc));//将用户计数器ID放入map
 	
 		if (re != SGX_SUCCESS || mc_value != temdata.Scount) {
@@ -1174,11 +1173,23 @@ int GetdatatoClient(int ID,uint8_t* data, size_t len, uint8_t* Enuserdata, size_
 		free(userac);
 		free(userdata);
 	}
+	else
+	{
+		uint8_t *pldata;
+		pldata = (uint8_t*)malloc(len);
+		AES_Decryptcbc(GlobalKeyManagement->find(ID)->second.sharekey, SGX_ECP256_KEY_SIZE, data, pldata, len);//解密用户端传来的请求
+		memcpy(&temdata.ID, pldata, sizeof(int));
+		memcpy(&temdata.Scount, pldata + sizeof(int), sizeof(int));
+		memcpy(&temdata.dataid, pldata + 2 * sizeof(int), sizeof(int));
+		memcpy(&temdata.ac, pldata + 3 * sizeof(int), sizeof(int));
+		delete pldata;
+	}
 	//查询该用户是否对该数据拥有操作权限
 	if (GlobalacManagement->find(ID)->second->find(temdata.dataid)->second >= temdata.ac) {
 		UpdateUscount(&GlobalCountManagement->find(ID)->second);
 		Tofileenclave tamp;
 		tamp.dataid = temdata.dataid;
+		//printint(tamp.dataid);
 		memcpy(tamp.userkey.s, GlobalKeyManagement->find(ID)->second.sharekey,SGX_ECP256_KEY_SIZE);
 		size_t Tologicalendatalen = getEncryptdatalen(sizeof(Tofileenclave));
 		uint8_t *Endata2enclave = new uint8_t[Tologicalendatalen];
