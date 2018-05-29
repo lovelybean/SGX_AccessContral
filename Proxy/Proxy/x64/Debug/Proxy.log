@@ -1,0 +1,26 @@
+﻿  proxy.cpp
+e:\vs2015_project\proxy\proxy\proxy.cpp(31): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(1769): note: 参见“sprintf”的声明
+e:\vs2015_project\proxy\proxy\proxy.cpp(32): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(90): note: 参见“strcat”的声明
+e:\vs2015_project\proxy\proxy\proxy.cpp(100): warning C4267: “=”: 从“size_t”转换到“int”，可能丢失数据
+e:\vs2015_project\proxy\proxy\proxy.cpp(124): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+e:\vs2015_project\proxy\proxy\proxy.cpp(141): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+e:\vs2015_project\proxy\proxy\proxy.cpp(169): warning C4267: “参数”: 从“size_t”转换到“const int”，可能丢失数据
+e:\vs2015_project\proxy\proxy\proxy.cpp(208): warning C4200: 使用了非标准扩展: 结构/联合中的零大小数组
+  e:\vs2015_project\proxy\proxy\proxy.cpp(208): note: 默认构造函数或 copy/move 赋值运算符将忽略此成员
+e:\vs2015_project\proxy\proxy\proxy.cpp(257): warning C4244: “参数”: 从“SOCKET”转换到“int”，可能丢失数据
+e:\vs2015_project\proxy\proxy\proxy.cpp(291): warning C4244: “=”: 从“std::streamoff”转换到“uint32_t”，可能丢失数据
+e:\vs2015_project\proxy\proxy\proxy.cpp(300): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+e:\vs2015_project\proxy\proxy\proxy.cpp(227): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1850): note: 参见“inet_addr”的声明
+e:\vs2015_project\proxy\proxy\proxy.cpp(358): warning C4244: “参数”: 从“SOCKET”转换到“int”，可能丢失数据
+e:\vs2015_project\proxy\proxy\proxy.cpp(390): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+e:\vs2015_project\proxy\proxy\proxy.cpp(448): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+e:\vs2015_project\proxy\proxy\proxy.cpp(380): warning C4477: “printf”: 格式字符串“%d”需要类型“int”的参数，但可变参数 1 拥有了类型“std::atomic<int>”
+e:\vs2015_project\proxy\proxy\proxy.cpp(388): warning C4477: “printf”: 格式字符串“%d”需要类型“int”的参数，但可变参数 1 拥有了类型“std::atomic<int>”
+e:\vs2015_project\proxy\proxy\proxy.cpp(366): warning C4101: “senddata”: 未引用的局部变量
+e:\vs2015_project\proxy\proxy\proxy.cpp(542): warning C4477: “printf”: 格式字符串“%d”需要类型“int”的参数，但可变参数 1 拥有了类型“std::atomic<int>”
+e:\vs2015_project\proxy\proxy\proxy.cpp(542): warning C4477: “printf”: 格式字符串“%d”需要类型“int”的参数，但可变参数 2 拥有了类型“std::atomic<int>”
+  Proxy.vcxproj -> E:\vs2015_project\Proxy\x64\Debug\Proxy.exe
+  Proxy.vcxproj -> E:\vs2015_project\Proxy\x64\Debug\Proxy.pdb (Full PDB)

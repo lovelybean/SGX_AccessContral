@@ -1,0 +1,27 @@
+﻿C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(392,5): warning MSB8028: The intermediate directory (x64\Simulation\) contains files shared from another project (Get_file_enclave.vcxproj).  This can lead to incorrect clean and rebuild behavior.
+  Creating proxy/bridge routines
+  Logical_enclave.cpp
+Logical_enclave.cpp(58): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+Logical_enclave.cpp(63): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+Logical_enclave.cpp(64): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+Logical_enclave.cpp(76): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+Logical_enclave.cpp(81): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+Logical_enclave.cpp(82): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+Logical_enclave.cpp(91): warning C4091: “typedef ”: 没有声明变量时忽略“Tofileenclave”的左侧
+  Logical_enclave_t.c
+    正在创建库 E:\ORAM\x64\Simulation\Logical_enclave.lib 和对象 E:\ORAM\x64\Simulation\Logical_enclave.exp
+  Logical_enclave.vcxproj -> E:\ORAM\x64\Simulation\Logical_enclave.dll
+  Logical_enclave.vcxproj -> E:\ORAM\x64\Simulation\Logical_enclave.pdb (Full PDB)
+  The required memory is 0x1e8000.
+  Succeed.
+  <EnclaveConfiguration>
+      <ProdID>0</ProdID>
+      <ISVSVN>0</ISVSVN>
+      <StackMaxSize>0x40000</StackMaxSize>
+      <HeapMaxSize>0x100000</HeapMaxSize>
+      <TCSNum>1</TCSNum>
+      <TCSPolicy>1</TCSPolicy>
+      <DisableDebug>0</DisableDebug>
+      <MiscSelect>0</MiscSelect>
+      <MiscMask>0xFFFFFFFF</MiscMask>
+  </EnclaveConfiguration>

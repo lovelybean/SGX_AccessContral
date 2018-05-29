@@ -1,0 +1,15 @@
+﻿  Acceptuserfile.cpp
+  Bucket.cpp
+  Block.cpp
+  ServerStore.cpp
+ServerStore.cpp(40): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+ServerStore.cpp(51): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+ServerStore.cpp(83): warning C4018: “<”: 有符号/无符号不匹配
+ServerStore.cpp(94): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+ServerStore.cpp(105): warning C4018: “<”: 有符号/无符号不匹配
+ServerStore.cpp(123): warning C4244: “=”: 从“double”转换到“int”，可能丢失数据
+ServerStore.cpp(124): warning C4244: “参数”: 从“double”转换到“int”，可能丢失数据
+  UserInterface.cpp
+  正在生成代码
+\\tsclient\d\sgx_projects\oram\oram\userinterface.cpp : fatal error C1083: 无法打开编译器中间文件: “\\tsclient\D\sgx_projects\ORAM\Release\ORAM.ipdb”: Permission denied
+LINK : fatal error LNK1257: 代码生成失败

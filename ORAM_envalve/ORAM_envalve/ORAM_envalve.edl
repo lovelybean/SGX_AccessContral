@@ -1,0 +1,56 @@
+enclave {
+    include "sgx_eid.h"
+	from "sgx_tae_service.edl" import *;
+    include "sgx_dh.h"
+	include "AccessRight.h"
+    trusted {
+        /* define ECALLs here. */
+		public void SaveasBlock([in, size=len] char *buf,int index,size_t len);
+		/*the interface for user to get data from oram*/
+		public void getBlock();
+		public void InitORAM();
+		/*public void SetUserAccessRight(int userid,int dataindex,enum accesstype userac);*/
+		public int getuserdata(int pattern,int index,int userid,enum accesstype userac);
+		/*change path*/
+		public void setbackdata();
+		public void Transferid([in,size=len]char *data,int index,size_t len);
+		public void getacORAM(int index,int id,int ac,int lo,int len,int tag);
+		public void getacPosMap(int index,int tag,int type);
+		public void returnuserdata(int index,int sign);
+		public uint32_t createcount([out,size=len]uint8_t *data,size_t len);
+		public uint32_t updatecount([in,out,size=len]uint8_t *data, size_t len);
+
+		public uint32_t DetectacData([in,size=len]uint8_t* data,size_t len,[out,size=outlen]uint8_t* Endata,size_t outlen);
+		public int GetServerpublickey([out,size=len]uint8_t *px,[out,size=len]uint8_t *py,size_t len);
+		public int ComputeSharekey([in,size=len]uint8_t *px, [in,size=len]uint8_t *py,size_t len);
+		public int gettestdata([out,size=len]uint8_t *data,size_t len);
+		public int Insertskey([out,size=len]uint8_t* sealkey,size_t len);
+		public int GetdatatoClient(int ID,[in,size=len]uint8_t* data,size_t len,[out,size=Enlen]uint8_t* Enuserdata,size_t Enlen);
+		public uint32_t Buildsecurepath(sgx_enclave_id_t src_enclave_id, sgx_enclave_id_t dest_enclave_id);
+    };
+
+    untrusted {
+        /* define OCALLs here. */
+		void printblock([in,string]char *data);
+		void printint(int i);
+		int getrandnum(int num);
+		int acValidity(int index,int userid,enum accesstype userac);
+		void transferstash([in,size=len] char *data,int index,size_t len);
+		void SerializeORAM([in,size=len]char *data,int i,  int index, int tag, size_t len);
+		void StorePosMap(int pos,int tag,int type);
+		void Transferacbucket(int len,int index,int tag);
+		void GetVcount([out,size=len]uint8_t* data,size_t len);
+		//void WriteVcount([in,size=len]uint8_t* data,size_t len);
+		size_t Getdatalen(int ID);
+		void Getuserdatafromdisk(int ID,[out,size=len]uint8_t *userdata,size_t len);
+		//int Encryptusershuju(int dataid,[out,size=len]uint8_t* usershuju, size_t len);
+		int UpdateshujutoServerdisk(int ID,[in,size=len]uint8_t* data,size_t len);
+		//在两个enclave间建立可信通道
+		uint32_t session_request_lo(sgx_enclave_id_t src_enclave_id, sgx_enclave_id_t dest_enclave_id, [out] sgx_dh_msg1_t *dh_msg1,[out] uint32_t *session_id);
+        uint32_t exchange_report_lo(sgx_enclave_id_t src_enclave_id, sgx_enclave_id_t dest_enclave_id, [in] sgx_dh_msg2_t *dh_msg2, [out] sgx_dh_msg3_t *dh_msg3, uint32_t session_id);
+		//test hash
+		void printhash([in,size=len]uint8_t* dhash,size_t len);
+		void disp([in,size=len]uint8_t *pbuf,size_t len);
+		uint32_t Getuserfilefromenclave2(sgx_enclave_id_t dest_enclave_id,[in,size=len]uint8_t* data,size_t len,[out,size=len2]uint8_t *Enuserdata,size_t len2);
+    };
+};

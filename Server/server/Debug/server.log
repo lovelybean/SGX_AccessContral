@@ -1,0 +1,13 @@
+﻿  Server.cpp
+Server.obj : error LNK2019: 无法解析的外部符号 _EC_POINT_new，该符号在函数 "unsigned char * __cdecl genECDHsharedsecret(struct ec_key_st *,unsigned char *,unsigned int)" (?genECDHsharedsecret@@YAPAEPAUec_key_st@@PAEI@Z) 中被引用
+Server.obj : error LNK2019: 无法解析的外部符号 _EC_POINT_point2oct，该符号在函数 "struct ec_key_st * __cdecl genECDHpubkey(unsigned char *)" (?genECDHpubkey@@YAPAUec_key_st@@PAE@Z) 中被引用
+Server.obj : error LNK2019: 无法解析的外部符号 _EC_POINT_oct2point，该符号在函数 "unsigned char * __cdecl genECDHsharedsecret(struct ec_key_st *,unsigned char *,unsigned int)" (?genECDHsharedsecret@@YAPAEPAUec_key_st@@PAEI@Z) 中被引用
+Server.obj : error LNK2019: 无法解析的外部符号 _EC_KEY_new，该符号在函数 "struct ec_key_st * __cdecl genECDHpubkey(unsigned char *)" (?genECDHpubkey@@YAPAUec_key_st@@PAE@Z) 中被引用
+Server.obj : error LNK2019: 无法解析的外部符号 _EC_KEY_new_by_curve_name，该符号在函数 "struct ec_key_st * __cdecl genECDHpubkey(unsigned char *)" (?genECDHpubkey@@YAPAUec_key_st@@PAE@Z) 中被引用
+Server.obj : error LNK2019: 无法解析的外部符号 _EC_KEY_get0_group，该符号在函数 "struct ec_key_st * __cdecl genECDHpubkey(unsigned char *)" (?genECDHpubkey@@YAPAUec_key_st@@PAE@Z) 中被引用
+Server.obj : error LNK2019: 无法解析的外部符号 _EC_KEY_get0_public_key，该符号在函数 "struct ec_key_st * __cdecl genECDHpubkey(unsigned char *)" (?genECDHpubkey@@YAPAUec_key_st@@PAE@Z) 中被引用
+Server.obj : error LNK2019: 无法解析的外部符号 _EC_KEY_generate_key，该符号在函数 "struct ec_key_st * __cdecl genECDHpubkey(unsigned char *)" (?genECDHpubkey@@YAPAUec_key_st@@PAE@Z) 中被引用
+Server.obj : error LNK2019: 无法解析的外部符号 _ECDH_compute_key，该符号在函数 "unsigned char * __cdecl genECDHsharedsecret(struct ec_key_st *,unsigned char *,unsigned int)" (?genECDHsharedsecret@@YAPAEPAUec_key_st@@PAEI@Z) 中被引用
+C:\OpenSSL-Win64\lib\libeay32.lib : warning LNK4272: 库计算机类型“x64”与目标计算机类型“X86”冲突
+C:\OpenSSL-Win64\lib\ssleay32.lib : warning LNK4272: 库计算机类型“x64”与目标计算机类型“X86”冲突
+E:\vs2015 project\Server\Debug\server.exe : fatal error LNK1120: 9 个无法解析的外部命令

@@ -1,0 +1,24 @@
+﻿  Creating untrusted proxy/bridge routines
+  Creating untrusted proxy/bridge routines
+  UserInterface.cpp
+  Server.cpp
+e:\oram\oram\server.cpp(86): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(1769): note: 参见“sprintf”的声明
+e:\oram\oram\server.cpp(87): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(90): note: 参见“strcat”的声明
+e:\oram\oram\server.cpp(140): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+e:\oram\oram\server.cpp(157): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+e:\oram\oram\server.cpp(233): warning C4244: “return”: 从“SOCKET”转换到“int”，可能丢失数据
+e:\oram\oram\server.cpp(286): warning C4244: “参数”: 从“SOCKET”转换到“int”，可能丢失数据
+e:\oram\oram\server.cpp(323): warning C4101: “prk”: 未引用的局部变量
+e:\oram\oram\server.cpp(462): warning C4244: “参数”: 从“SOCKET”转换到“int”，可能丢失数据
+  Enclave_file.cpp
+e:\oram\oram\enclave_file.cpp(115): warning C4244: “初始化”: 从“std::streamoff”转换到“int”，可能丢失数据
+e:\oram\oram\enclave_file.cpp(218): warning C4101: “updatedata”: 未引用的局部变量
+  Block.cpp
+  正在生成代码...
+  ORAM_envalve_u.c
+  Logical_enclave_u.c
+  正在生成代码...
+  ORAM.vcxproj -> E:\ORAM\x64\Simulation\ORAM.exe
+  ORAM.vcxproj -> E:\ORAM\x64\Simulation\ORAM.pdb (Full PDB)

@@ -1,0 +1,57 @@
+﻿  proxy.cpp
+proxy.cpp(83): warning C4267: “=”: 从“size_t”转换到“int”，可能丢失数据
+proxy.cpp(107): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+proxy.cpp(124): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+proxy.cpp(152): warning C4267: “参数”: 从“size_t”转换到“const int”，可能丢失数据
+proxy.cpp(188): warning C4200: 使用了非标准扩展: 结构/联合中的零大小数组
+  proxy.cpp(188): note: 默认构造函数或 copy/move 赋值运算符将忽略此成员
+proxy.cpp(230): warning C4244: “参数”: 从“SOCKET”转换到“int”，可能丢失数据
+proxy.cpp(258): warning C4244: “=”: 从“std::streamoff”转换到“uint32_t”，可能丢失数据
+proxy.cpp(261): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+proxy.cpp(200): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+  C:\Program Files (x86)\Windows Kits\8.1\Include\um\Winsock2.h(1850): note: 参见“inet_addr”的声明
+proxy.cpp(337): warning C4244: “参数”: 从“SOCKET”转换到“int”，可能丢失数据
+proxy.obj : error LNK2001: 无法解析的外部符号 EC_KEY_new_by_curve_name
+proxy.obj : error LNK2001: 无法解析的外部符号 AES_set_decrypt_key
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_connect
+proxy.obj : error LNK2001: 无法解析的外部符号 X509_NAME_oneline
+proxy.obj : error LNK2001: 无法解析的外部符号 EC_KEY_get0_group
+proxy.obj : error LNK2001: 无法解析的外部符号 X509_free
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_free
+proxy.obj : error LNK2001: 无法解析的外部符号 SHA256
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_get_peer_certificate
+proxy.obj : error LNK2001: 无法解析的外部符号 OPENSSL_add_all_algorithms_noconf
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_new
+proxy.obj : error LNK2001: 无法解析的外部符号 SSLv3_client_method
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_CTX_free
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_CTX_ctrl
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_library_init
+proxy.obj : error LNK2001: 无法解析的外部符号 EC_POINT_point2oct
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_load_error_strings
+proxy.obj : error LNK2001: 无法解析的外部符号 EC_KEY_new
+proxy.obj : error LNK2001: 无法解析的外部符号 EC_POINT_new
+proxy.obj : error LNK2001: 无法解析的外部符号 EC_KEY_get0_public_key
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_CTX_use_certificate_file
+proxy.obj : error LNK2001: 无法解析的外部符号 AES_cbc_encrypt
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_CTX_use_PrivateKey_file
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_set_fd
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_CTX_new
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_write
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_get_verify_result
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_CTX_set_verify
+proxy.obj : error LNK2001: 无法解析的外部符号 AES_set_encrypt_key
+proxy.obj : error LNK2001: 无法解析的外部符号 X509_get_subject_name
+proxy.obj : error LNK2001: 无法解析的外部符号 ERR_print_errors_fp
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_accept
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_read
+proxy.obj : error LNK2001: 无法解析的外部符号 EC_KEY_generate_key
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_CTX_load_verify_locations
+proxy.obj : error LNK2001: 无法解析的外部符号 X509_get_issuer_name
+proxy.obj : error LNK2001: 无法解析的外部符号 SSLv3_server_method
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_CIPHER_get_name
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_CTX_check_private_key
+proxy.obj : error LNK2001: 无法解析的外部符号 ECDH_compute_key
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_shutdown
+proxy.obj : error LNK2001: 无法解析的外部符号 SSL_get_current_cipher
+proxy.obj : error LNK2001: 无法解析的外部符号 EC_POINT_oct2point
+E:\vs2015 project\Proxy\x64\Release\Proxy.exe : fatal error LNK1120: 43 个无法解析的外部命令

@@ -1,0 +1,57 @@
+﻿  Creating proxy/bridge routines
+  acBlock.cpp
+acBlock.cpp(71): warning C4267: “return”: 从“size_t”转换到“int”，可能丢失数据
+  acBucket.cpp
+  Block.cpp
+  Bucket.cpp
+  ORAM_envalve.cpp
+ORAM_envalve.cpp(19): warning C4091: “typedef ”: 没有声明变量时忽略“skey”的左侧
+ORAM_envalve.cpp(81): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(129): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(241): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(251): warning C4267: “=”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(252): warning C4244: “=”: 从“double”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(254): warning C4244: “参数”: 从“double”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(256): warning C4244: “参数”: 从“double”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(343): warning C4244: “参数”: 从“unsigned __int64”转换到“double”，可能丢失数据
+ORAM_envalve.cpp(343): warning C4244: “=”: 从“double”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(362): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(365): warning C4244: “参数”: 从“double”转换到“unsigned int”，可能丢失数据
+ORAM_envalve.cpp(428): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(446): warning C4244: “参数”: 从“double”转换到“unsigned int”，可能丢失数据
+ORAM_envalve.cpp(522): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(614): warning C4200: 使用了非标准扩展: 结构/联合中的零大小数组
+  ORAM_envalve.cpp(614): note: 默认构造函数或 copy/move 赋值运算符将忽略此成员
+ORAM_envalve.cpp(620): warning C4200: 使用了非标准扩展: 结构/联合中的零大小数组
+  ORAM_envalve.cpp(620): note: 默认构造函数或 copy/move 赋值运算符将忽略此成员
+ORAM_envalve.cpp(671): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
+ORAM_envalve.cpp(685): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
+ORAM_envalve.cpp(765): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
+ORAM_envalve.cpp(797): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(802): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(803): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(815): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(820): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(821): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(1065): warning C4091: “typedef ”: 没有声明变量时忽略“Tofileenclave”的左侧
+ORAM_envalve.cpp(1100): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(1130): warning C4267: “初始化”: 从“size_t”转换到“uint32_t”，可能丢失数据
+  正在生成代码...
+e:\oram_envalve\oram_envalve\oram_envalve.cpp(593): warning C4715: “Buildsecurepath”: 不是所有的控件路径都返回值
+  ORAM_envalve_t.c
+    正在创建库 E:\ORAM\x64\Simulation\ORAM_envalve.lib 和对象 E:\ORAM\x64\Simulation\ORAM_envalve.exp
+  ORAM_envalve.vcxproj -> E:\ORAM\x64\Simulation\ORAM_envalve.dll
+  ORAM_envalve.vcxproj -> E:\ORAM\x64\Simulation\ORAM_envalve.pdb (Full PDB)
+  The required memory is 0x26f000.
+  Succeed.
+  <EnclaveConfiguration>
+      <ProdID>0</ProdID>
+      <ISVSVN>0</ISVSVN>
+      <StackMaxSize>0x40000</StackMaxSize>
+      <HeapMaxSize>0x100000</HeapMaxSize>
+      <TCSNum>1</TCSNum>
+      <TCSPolicy>1</TCSPolicy>
+      <DisableDebug>0</DisableDebug>
+      <MiscSelect>0</MiscSelect>
+      <MiscMask>0xFFFFFFFF</MiscMask>
+  </EnclaveConfiguration>

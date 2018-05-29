@@ -1,0 +1,9 @@
+﻿  Creating untrusted proxy/bridge routines
+  UserInterface.cpp
+  Enclave_file.cpp
+d:\vs2015_projects\oram\oram\enclave_file.cpp(97): warning C4018: “<”: 有符号/无符号不匹配
+  Block.cpp
+  正在生成代码...
+  ORAM_envalve_u.c
+  ORAM.vcxproj -> D:\vs2015_projects\ORAM\Debug\ORAM.exe
+  ORAM.vcxproj -> D:\vs2015_projects\ORAM\Debug\ORAM.pdb (Full PDB)
