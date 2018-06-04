@@ -22,6 +22,7 @@
 #define ECDH_SIZE 33 
 #define MSG_LEN 128
 #define MAXBUF 1024
+#define ENFILELEN 1604
 #define P2SDATA 44
 #define SaveDatasize 580
 #define SharedKey 592
@@ -32,6 +33,36 @@
 #pragma comment(lib,"ws2_32.lib")
 sgx_enclave_id_t   eid;
 sgx_enclave_id_t   Leid;
+//初始化文件
+int Initfile() {
+	std::fstream fs;
+	fs.open("E:\\Server_file\\0.txt",std::ios::in);
+	if (fs) {
+		fs.close();
+		return -1;
+	}
+	else
+	{
+		fs.close();
+	}
+	for (int i = 0; i < 3; i++) {
+		uint32_t re = 0;
+		std::string url = "E:\\Clientfile\\" + std::to_string(i) + ".txt";	
+		fs.open(url, std::ios::in | std::ios::binary);
+		uint8_t *file = new uint8_t[1024];
+		memset(file,0,1024);
+		fs.read((char*)file, MAXBUF);
+		uint8_t Enfilelen[ENFILELEN];
+		fs.close();
+		Encryptuserfile(Leid, &re, file, MAXBUF, Enfilelen, ENFILELEN);
+		delete[] file;
+		std::string url2 = "E:\\Server_file\\" + std::to_string(i) + ".txt";
+		fs.open(url2, std::ios::app | std::ios::out | std::ios::binary);
+		fs.write((char*)Enfilelen, ENFILELEN);
+		fs.flush();
+		fs.close();
+	}
+}
 //local attestation
 void disp(uint8_t *pbuf, size_t len)
 
@@ -51,6 +82,17 @@ void disp(uint8_t *pbuf, size_t len)
 
 	putchar('\n');
 
+}
+//更新本地用户文件
+int Updatefileindisk(int dataid, uint8_t *file, size_t len)
+{
+	std::fstream fs;
+	std::string url = "E:\\Server_file\\" + std::to_string(dataid) + ".txt";
+	fs.open(url,std::ios::trunc|std::ios::out|std::ios::binary);
+	fs.write((char*)file,len);
+	fs.flush();
+	fs.close();
+	return SGX_SUCCESS;
 }
 //show cert
 void ShowCerts(SSL * ssl)
@@ -177,8 +219,6 @@ void Getuserdatafromdisk(int ID, uint8_t *userdata, size_t len) {
 	std::fstream fs;
 	fs.open(url, std::ios::in|std::ios::binary);
 	fs.read((char*)userdata,len);
-	uint8_t ppp[1252];
-	memcpy(ppp,userdata,len);
 	fs.flush();
 	fs.close();
 }
@@ -196,10 +236,10 @@ int Encryptusershuju(int dataid, uint8_t* usershuju, size_t len) {
 	int re = 1;
 	std::fstream fs;
 	std::string url = "E:\\Server_file\\" + std::to_string(dataid) + ".txt";
-	fs.open(url, std::ios::in);
+	fs.open(url, std::ios::in|std::ios::binary);
 	if (fs) {
 		fs.read((char*)usershuju, len);
-		printf("\nserver端数据：%s\n",(char*)usershuju);
+		//printf("\nserver端数据：%s\n",(char*)usershuju);
 		re = 0;
 	}
 	fs.flush();
@@ -554,8 +594,29 @@ void getClientcon(sgx_enclave_id_t eid)
 	}
 }
 
+//绑定计数器并加密用户文件到disk，暂定文件大小为1024kb
+uint32_t Enfileindisk(std::string fileurl,int dataid) {
+	std::fstream fs;
+	fs.open(fileurl,std::ios::in|std::ios::binary);
+	uint8_t *ENfile = new uint8_t[MAXBUF+580];
+	uint8_t file[MAXBUF];
+	fs.read((char*)file,MAXBUF);
+	sgx_enclave_id_t fid;
+	sgx_launch_token_t token = { 0 };
+	int updated = 0;
+	sgx_create_enclave(ENCLAVE_LOGICFILE,SGX_DEBUG_FLAG,&token,&updated,&fid,NULL);
+	uint32_t re = 0;
+	Encryptuserfile(fid,&re,file,MAXBUF,ENfile,MAXBUF+580);
+	sgx_destroy_enclave(fid);
+	fs.close();
+	std::string url = "E:\\Server_file\\" + std::to_string(dataid) + ".txt";
+	fs.open(url,std::ios::app|std::ios::out|std::ios::binary);
+	fs.write((char*)ENfile,MAXBUF+560);
+	fs.flush();
+	fs.close();
+	return updated;
+}
 //开启多线程，线程1用来监听6000端口，线程2用来监听6001端口
-
 void StartServer()
 {	
 	sgx_status_t       ret = SGX_SUCCESS;
@@ -565,6 +626,8 @@ void StartServer()
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 	ret = sgx_create_enclave(ENCLAVE_FILE, SGX_DEBUG_FLAG, &token, &updated, &eid, NULL);
 	ret = sgx_create_enclave(ENCLAVE_LOGICFILE, SGX_DEBUG_FLAG, &token, &updated, &Leid, NULL);
+	//初始化文件
+	Initfile();
 	uint32_t rs = 0;
 	Buildsecurepath(eid, &rs, eid, Leid);
 	std::thread t1(getClientcon,eid);
@@ -575,6 +638,7 @@ void StartServer()
 	sgx_destroy_enclave(Leid);
 	WSACleanup();
 }
+
 //基于sgx自带的ra-sample做一次远端认证，仅在用户第一次连接时将报告发送给用户
 //typedef int(*sample_enroll)(int sp_credentials, sample_spid_t* spid,
 //	int* authentication_token);

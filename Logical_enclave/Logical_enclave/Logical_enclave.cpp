@@ -2,10 +2,19 @@
 #include <string>
 #include <map>
 #include <queue>
+#include "sgx_tae_service.h"
+#include "sgx_tseal.h"
 #include "ipp/ippcp.h"
 #include "sgx_trts.h"
+#define ENFILELEN 1604
 sgx_key_128bit_t dh_aek;   // Session key
 sgx_dh_session_t sgx_dh_session;
+//uerfile数据结构
+typedef struct userfile {
+	sgx_mc_uuid_t mc;
+	uint32_t mc_value;
+	uint8_t secret[];
+}uf;
 uint32_t session_request(sgx_enclave_id_t src_enclave_id, sgx_dh_msg1_t *dh_msg1, uint32_t *session_id)
 {
 
@@ -83,43 +92,135 @@ uint32_t AES_Decryptcbc(uint8_t* key, size_t len, uint8_t *Entext, uint8_t *plai
 	free(pCtx);
 	return re;
 }
-typedef struct shuju {
-	uint8_t data[1024];
-};
-std::map<int,shuju*> *userfile = new std::map<int,shuju*>;
+std::map<int,uf*> *userfile = new std::map<int,uf*>;
 std::queue<int> *FIFOqueue = new std::queue<int>;//用于保存FIFO的顺序，目前设置缓存为10000个文件
 typedef struct Tofileenclave {
 	int dataid;
 	sgx_ec256_dh_shared_t userkey;
 };
+//增加计数器的值
+uint32_t UpdateCount(sgx_mc_uuid_t *mc,uint32_t *tmc_value) {
+	int busy_retry_times = 2;
+	sgx_status_t ret = SGX_SUCCESS;
+	do {
+		ret = sgx_create_pse_session();
+	} while (ret == SGX_ERROR_BUSY && busy_retry_times--);
+	if (ret != SGX_SUCCESS) {
+		return ret;
+	}
+	uint32_t mc_value = 0;
+	ret = sgx_read_monotonic_counter(mc, &mc_value);
+	if (mc_value != *tmc_value)
+	{
+		return ret;
+	}
+	ret = sgx_increment_monotonic_counter(mc, tmc_value);
+	if (ret != SGX_SUCCESS)
+	{
+		return ret;
+	}
+	ret = sgx_close_pse_session();
+	return ret;
+}
 uint32_t FindfileTOuser(uint8_t* data, size_t len, uint8_t *Enuserdata, size_t len2) {
 	int re = 0;
+	uf *useruf;
 	Tofileenclave tamp;
+	sgx_status_t ret = SGX_SUCCESS;
+	
 	uint8_t *getendatafromenclave1 = new uint8_t[len];
 	re = AES_Decryptcbc(dh_aek, sizeof(sgx_aes_ctr_128bit_key_t),data,getendatafromenclave1,len);
 	if (re != 0) return re;
 	memcpy(&tamp, getendatafromenclave1, sizeof(Tofileenclave));
 	delete[] getendatafromenclave1;
 	if (userfile->find(tamp.dataid) == userfile->end()) {
-		shuju *usershuju = new shuju;
-		Encryptusershuju(&re, tamp.dataid, usershuju->data, 1024);
+		uint8_t *enfile = new uint8_t[ENFILELEN];
+		Encryptusershuju(&re, tamp.dataid, enfile, ENFILELEN);
 		if (re != 0) return re;
+		useruf = (uf*)malloc(ENFILELEN-560);
+		uint32_t datalen = ENFILELEN - 560;
+		ret = sgx_unseal_data((sgx_sealed_data_t*)enfile,NULL,0,(uint8_t*)useruf,&datalen);
+		delete[] enfile;
+		if (ret != SGX_SUCCESS) {
+			return -1;
+		}
+		//计数器++
+		UpdateCount(&useruf->mc,&useruf->mc_value);
+		//开线程异步写回disk
+		Updatefileindisk(&re, tamp.dataid,(uint8_t*)useruf,ENFILELEN);
 		if (FIFOqueue->size() <= 10000) {
 			FIFOqueue->push(tamp.dataid);
-			userfile->insert(std::pair<int, shuju*>(tamp.dataid, usershuju));
+			userfile->insert(std::pair<int, uf*>(tamp.dataid, useruf));
 		}
 		else
 		{
 			int topid = FIFOqueue->front();
-			FIFOqueue->pop();
-			userfile->erase(topid);
-			userfile->insert(std::pair<int, shuju*>(tamp.dataid, usershuju));
+			uint8_t updatefile[ENFILELEN];
+			memcpy(updatefile,userfile->find(topid)->second,ENFILELEN);
+			int re = 0;
+			Updatefileindisk(&re,topid,updatefile,ENFILELEN);
+			if (re == 0) {
+				FIFOqueue->pop();
+				userfile->erase(topid);
+				userfile->insert(std::pair<int, uf*>(tamp.dataid, useruf));
+			}
+			else
+			{
+				return -1;
+			}
 		}
-		re = AES_Encryptcbc(tamp.userkey.s, SGX_ECP256_KEY_SIZE, usershuju->data, 1024, Enuserdata);
+		re = AES_Encryptcbc(tamp.userkey.s, SGX_ECP256_KEY_SIZE, useruf->secret, 1024, Enuserdata);
 	}
 	else 
 	{
-		re = AES_Encryptcbc(tamp.userkey.s, SGX_ECP256_KEY_SIZE, userfile->find(tamp.dataid)->second->data, 1024, Enuserdata);
+		UpdateCount(&userfile->find(tamp.dataid)->second->mc,&userfile->find(tamp.dataid)->second->mc_value);
+		//开线程异步写回disk
+		Updatefileindisk(&re, tamp.dataid, (uint8_t*)userfile->find(tamp.dataid)->second, ENFILELEN);
+		re = AES_Encryptcbc(tamp.userkey.s, SGX_ECP256_KEY_SIZE, userfile->find(tamp.dataid)->second->secret, 1024, Enuserdata);
 	}
 	return re;
 }
+//用户file加密并绑定计数器
+uint32_t Encryptuserfile(uint8_t* file, size_t len,uint8_t *Entemfile,size_t outlen) {
+	sgx_status_t ret = SGX_SUCCESS;
+	uf *temuf = (uf*)malloc(sizeof(uf)+len);
+	memset(temuf, 0, sizeof(uf) + len);
+	int busy_retry_times = 2;
+	uint32_t size = sgx_calc_sealed_data_size(0, sizeof(uf) + len);
+	do {
+		ret = sgx_create_pse_session();
+	} while (ret == SGX_ERROR_BUSY && busy_retry_times--);
+	if (ret != SGX_SUCCESS) {
+		return -1;
+	}
+	ret = sgx_create_monotonic_counter(&temuf->mc, &temuf->mc_value);
+	if (ret != SGX_SUCCESS)
+	{
+		return -1;
+	}
+	memcpy(&temuf->secret, file, len);
+	uint32_t datalen = sizeof(uf) + len;
+	ret = sgx_seal_data(0, NULL, datalen, (uint8_t*)temuf, outlen, (sgx_sealed_data_t*)Entemfile);
+	ret = sgx_close_pse_session();
+	if (ret != SGX_SUCCESS) {
+		return -1;
+	}
+	return ret;
+}
+////程序结束时将map内所有数据写回disk
+//uint32_t WritebackdatatoDisk(uint8_t *order,size_t len) {
+//	uint32_t re = 0;
+//	uint8_t Deorder[16];
+//	re = AES_Decryptcbc(dh_aek, sizeof(sgx_aes_ctr_128bit_key_t), order, Deorder, len);
+//	int t = 0;
+//	memcpy(&t,Deorder,sizeof(int));
+//	if (t == 521) {
+//		std::map<int,uf*>::iterator tamuf;
+//		for (tamuf = userfile->begin(); tamuf != userfile->end(); tamuf++) {
+//			Updatefileindisk((int*)&re, tamuf->first, (uint8_t*)tamuf->second, ENFILELEN);
+//		}
+//	}
+//	delete[] userfile;
+//	delete[] FIFOqueue;
+//	return re;
+//}

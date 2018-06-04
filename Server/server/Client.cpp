@@ -171,7 +171,9 @@ void CheckServerpem(X509 *cert, X509 *cacert)
 
 }
 
-uint8_t *sharedkey;
+uint8_t dh_key[32];
+int initclient = 0;
+int Scount = 0;
 typedef struct requestheader {
 	int ID;
 	int Scount;
@@ -179,8 +181,9 @@ typedef struct requestheader {
 	int ac;
 }rh;
 uint8_t *realdata = new uint8_t[1024];
+//用户获取数据
 uint8_t* GetDatafromServer(int ID,int dataid,int ac) {
-	int Scount = 0;	
+	rh UsertoServer;
 	//char *errormessage;
 	SSL_CTX *ctx;
 	SSL *ssl;
@@ -218,6 +221,7 @@ uint8_t* GetDatafromServer(int ID,int dataid,int ac) {
 	std::fstream fs;
 	std::string url = "E:\\Client\\Key\\" + std::to_string(ID) + ".txt";
 	fs.open(url,std::ios::in);
+	//判断用户是否为第一次加入系统
 	if (fs) {
 		type = 1;
 	}
@@ -242,7 +246,10 @@ uint8_t* GetDatafromServer(int ID,int dataid,int ac) {
 			SSL_read(ssl, sx, Serverpubkeylen);
 			SSL_read(ssl, sy, Serverpubkeylen);
 			EC_POINT* Serverpk = genServerpubkey(ecdh,sx, sy);
+			uint8_t *sharedkey;
 			sharedkey = genECDHsharedkey(ecdh, Serverpk, 32);
+			memcpy(dh_key, sharedkey, sizeof(dh_key));
+			initclient = 1;
 			uint8_t testdata[16];
 			SSL_read(ssl, testdata, sizeof(testdata));
 			uint8_t plaintestdata[16];
@@ -269,7 +276,7 @@ uint8_t* GetDatafromServer(int ID,int dataid,int ac) {
 			else break;
 		}
 		else
-		{
+		{	
 			int error = 0;
 			SSL_write(ssl, (uint8_t*)&type, sizeof(int));
 			SSL_write(ssl, (uint8_t*)&ID, sizeof(int));
@@ -279,20 +286,21 @@ uint8_t* GetDatafromServer(int ID,int dataid,int ac) {
 				break;
 			}
 		}
-
-		//加密并发送请求到服务端
-		fs.open(url, std::ios::in|std::ios::binary);
-		uint8_t Enkey[32];
-		rh UsertoServer;
+		//初始化全局变量
+		if (initclient == 0) {
+			fs.open(url, std::ios::in | std::ios::binary);
+			fs.read((char*)&Scount, sizeof(int));
+			fs.read((char*)dh_key, 32);
+			fs.close();
+		}
+		//uint8_t Enkey[32];
 		UsertoServer.ID = ID;
 		UsertoServer.dataid = dataid;
 		UsertoServer.ac = ac;
-		fs.read((char*)&UsertoServer.Scount, sizeof(int));
-		Scount = UsertoServer.Scount;
+		UsertoServer.Scount = Scount;
 		printf("\n客户端scount值：%d",Scount);
-		fs.read((char*)Enkey, 32);
 		uint8_t sendtoServer[sizeof(rh)];
-		aes_encrypt((char*)&UsertoServer, sizeof(rh),Enkey, (char*)sendtoServer);
+		aes_encrypt((char*)&UsertoServer, sizeof(rh),dh_key, (char*)sendtoServer);//加密并发送请求到服务端
 		SSL_write(ssl, sendtoServer, sizeof(rh));
 
 		//接受服务端相应信息
@@ -307,13 +315,13 @@ uint8_t* GetDatafromServer(int ID,int dataid,int ac) {
 				std::fstream fs;
 				fs.open(url, std::ios::trunc| std::ios::out| std::ios::binary);
 				fs.write((char*)&Scount, sizeof(int));//将计数器值写回文件
-				fs.write((char*)Enkey, 32);//将秘钥写回文件
+				fs.write((char*)dh_key, 32);//将秘钥写回文件
 				fs.flush();
 				fs.close();
 				//解密服务端传来数据
 				
 				memset(realdata, 0, 1024);
-				aes_decrypt((char*)datafromserver,1024, Enkey, (char*)realdata);
+				aes_decrypt((char*)datafromserver,1024, dh_key, (char*)realdata);
 				delete datafromserver;
 			}
 		}
@@ -339,6 +347,10 @@ uint8_t* GetDatafromServer(int ID,int dataid,int ac) {
 	WSACleanup();
 	return realdata;
 }
+//用户上传文件,有时间再写
+//uint32_t Uploadfile(int ID,std::string fileurl) {
+//	return;
+//}
 //用户数据结构
 typedef struct user_data
 {
@@ -467,7 +479,7 @@ void ChangeAC(int id,int dataid,int ac)
 void main()
 {
 	/*GetScertfromProxy(1);*/
-	GetDatafromServer(2,0,1);
+	GetDatafromServer(0,2,1);
 	printf("\n%s\n", (char*)realdata);
 	system("pause");
 } 

@@ -1,6 +1,7 @@
 enclave {
     include "sgx_eid.h"
-	from "sgx_tstdc.edl" import *;
+	from "sgx_tae_service.edl" import *;
+	//from "sgx_tstdc.edl" import *;
     include "sgx_dh.h"
 
     trusted {
@@ -8,11 +9,14 @@ enclave {
 		public uint32_t session_request(sgx_enclave_id_t src_enclave_id, [out] sgx_dh_msg1_t *dh_msg1, [out] uint32_t *session_id);
 		 public uint32_t exchange_report(sgx_enclave_id_t src_enclave_id, [in] sgx_dh_msg2_t *dh_msg2, [out] sgx_dh_msg3_t *dh_msg3, uint32_t session_id);
 		 public uint32_t FindfileTOuser([in,size=len]uint8_t* data,size_t len,[out,size=len2]uint8_t *Enuserdata,size_t len2);
+		 public uint32_t Encryptuserfile([in,size=len]uint8_t* file,size_t len,[out,size=outlen]uint8_t *Entemfile,size_t outlen);
+		 //public uint32_t WritebackdatatoDisk([in,size=len]uint8_t *order,size_t len);
     };
 
     untrusted {
         /* define OCALLs here. */
 		int Encryptusershuju(int dataid,[out,size=len]uint8_t* usershuju, size_t len);
 		void disp([in,size=len]uint8_t *pbuf,size_t len);
+		int Updatefileindisk(int dataid,[in,size=len]uint8_t *file,size_t len);
     };
 };

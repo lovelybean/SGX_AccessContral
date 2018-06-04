@@ -3,9 +3,9 @@
 e:\vs2015_project\server\server\client.cpp(99): warning C4838: 从“char”转换到“unsigned char”需要收缩转换
 e:\vs2015_project\server\server\client.cpp(113): warning C4838: 从“char”转换到“unsigned char”需要收缩转换
 e:\vs2015_project\server\server\client.cpp(132): warning C4267: “参数”: 从“size_t”转换到“const int”，可能丢失数据
-e:\vs2015_project\server\server\client.cpp(208): warning C4244: “参数”: 从“SOCKET”转换到“int”，可能丢失数据
-e:\vs2015_project\server\server\client.cpp(202): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+e:\vs2015_project\server\server\client.cpp(211): warning C4244: “参数”: 从“SOCKET”转换到“int”，可能丢失数据
+e:\vs2015_project\server\server\client.cpp(205): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
   c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1850): note: 参见“inet_addr”的声明
-e:\vs2015_project\server\server\client.cpp(457): warning C4312: “类型转换”: 从“int”转换到更大的“char *”
+e:\vs2015_project\server\server\client.cpp(469): warning C4312: “类型转换”: 从“int”转换到更大的“char *”
   server.vcxproj -> E:\vs2015_project\Server\x64\Debug\Client.exe
   server.vcxproj -> E:\vs2015_project\Server\x64\Debug\Client.pdb (Full PDB)
