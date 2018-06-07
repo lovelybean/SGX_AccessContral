@@ -6,9 +6,11 @@
 #include "sgx_tseal.h"
 #include "ipp/ippcp.h"
 #include "sgx_trts.h"
+#include "sgx_thread.h"
 #define ENFILELEN 1604
 sgx_key_128bit_t dh_aek;   // Session key
 sgx_dh_session_t sgx_dh_session;
+
 //uerfile数据结构
 typedef struct userfile {
 	sgx_mc_uuid_t mc;
@@ -94,9 +96,15 @@ uint32_t AES_Decryptcbc(uint8_t* key, size_t len, uint8_t *Entext, uint8_t *plai
 }
 std::map<int,uf*> *userfile = new std::map<int,uf*>;
 std::queue<int> *FIFOqueue = new std::queue<int>;//用于保存FIFO的顺序，目前设置缓存为10000个文件
+std::map<int, int> *wfilelock = new std::map<int, int>;//用于保存锁，如果是写请求就将对应文件加锁。
+
+sgx_thread_mutex_t lock = SGX_THREAD_MUTEX_INITIALIZER;
+sgx_thread_mutex_t wf_mutex = SGX_THREAD_MUTEX_INITIALIZER;//文件写锁
+//sgx_thread_cond_t wc_cond = SGX_THREAD_COND_INITIALIZER;//条件锁
 typedef struct Tofileenclave {
 	int dataid;
 	sgx_ec256_dh_shared_t userkey;
+	int ac;
 };
 //增加计数器的值
 uint32_t UpdateCount(sgx_mc_uuid_t *mc,uint32_t *tmc_value) {
@@ -133,6 +141,23 @@ uint32_t FindfileTOuser(uint8_t* data, size_t len, uint8_t *Enuserdata, size_t l
 	if (re != 0) return re;
 	memcpy(&tamp, getendatafromenclave1, sizeof(Tofileenclave));
 	delete[] getendatafromenclave1;
+	//互斥信号量
+	int wtag = 0;
+	//判断用户是否为写请求，若为写则加锁。
+	sgx_thread_mutex_lock(&wf_mutex);
+	int isW=wfilelock->count(tamp.dataid);
+	if (isW == 0) {
+		if (tamp.ac == 2) {
+			wtag = 1;
+			wfilelock->insert(std::pair<int,int>(tamp.dataid,1));
+		}
+	}
+	else
+	{
+		sgx_thread_mutex_unlock(&wf_mutex);
+		return -3;
+	}
+	sgx_thread_mutex_unlock(&wf_mutex);
 	if (userfile->find(tamp.dataid) == userfile->end()) {
 		uint8_t *enfile = new uint8_t[ENFILELEN];
 		Encryptusershuju(&re, tamp.dataid, enfile, ENFILELEN);
@@ -147,20 +172,23 @@ uint32_t FindfileTOuser(uint8_t* data, size_t len, uint8_t *Enuserdata, size_t l
 		//计数器++
 		UpdateCount(&useruf->mc,&useruf->mc_value);
 		//开线程异步写回disk
-		Updatefileindisk(&re, tamp.dataid,(uint8_t*)useruf,ENFILELEN);
+		//Updatefileindisk(&re, tamp.dataid,(uint8_t*)useruf,ENFILELEN);
+		//int tmpsize = FIFOqueue->size();
+		
 		if (FIFOqueue->size() <= 10000) {
+			
 			FIFOqueue->push(tamp.dataid);
 			userfile->insert(std::pair<int, uf*>(tamp.dataid, useruf));
 		}
 		else
-		{
-			int topid = FIFOqueue->front();
-			uint8_t updatefile[ENFILELEN];
+		{	
+			int topid = FIFOqueue->front();		
+			uint8_t updatefile[ENFILELEN];		
 			memcpy(updatefile,userfile->find(topid)->second,ENFILELEN);
 			int re = 0;
 			Updatefileindisk(&re,topid,updatefile,ENFILELEN);
 			if (re == 0) {
-				FIFOqueue->pop();
+				FIFOqueue->pop();	
 				userfile->erase(topid);
 				userfile->insert(std::pair<int, uf*>(tamp.dataid, useruf));
 			}
@@ -173,10 +201,18 @@ uint32_t FindfileTOuser(uint8_t* data, size_t len, uint8_t *Enuserdata, size_t l
 	}
 	else 
 	{
+		//什么时候往disk写是个问题，目前都在map中更新。
 		UpdateCount(&userfile->find(tamp.dataid)->second->mc,&userfile->find(tamp.dataid)->second->mc_value);
 		//开线程异步写回disk
-		Updatefileindisk(&re, tamp.dataid, (uint8_t*)userfile->find(tamp.dataid)->second, ENFILELEN);
+		//Updatefileindisk(&re, tamp.dataid, (uint8_t*)userfile->find(tamp.dataid)->second, ENFILELEN);
 		re = AES_Encryptcbc(tamp.userkey.s, SGX_ECP256_KEY_SIZE, userfile->find(tamp.dataid)->second->secret, 1024, Enuserdata);
+	}
+	//写完成，解锁
+	if (wtag== 1) {
+		sgx_thread_mutex_lock(&wf_mutex);
+		gosleep();//睡眠1分钟，模拟用户用写操作该文件。
+		wfilelock->erase(wfilelock->find(tamp.dataid));
+		sgx_thread_mutex_unlock(&wf_mutex);
 	}
 	return re;
 }
@@ -208,19 +244,13 @@ uint32_t Encryptuserfile(uint8_t* file, size_t len,uint8_t *Entemfile,size_t out
 	return ret;
 }
 ////程序结束时将map内所有数据写回disk
-//uint32_t WritebackdatatoDisk(uint8_t *order,size_t len) {
-//	uint32_t re = 0;
-//	uint8_t Deorder[16];
-//	re = AES_Decryptcbc(dh_aek, sizeof(sgx_aes_ctr_128bit_key_t), order, Deorder, len);
-//	int t = 0;
-//	memcpy(&t,Deorder,sizeof(int));
-//	if (t == 521) {
-//		std::map<int,uf*>::iterator tamuf;
-//		for (tamuf = userfile->begin(); tamuf != userfile->end(); tamuf++) {
-//			Updatefileindisk((int*)&re, tamuf->first, (uint8_t*)tamuf->second, ENFILELEN);
-//		}
-//	}
-//	delete[] userfile;
-//	delete[] FIFOqueue;
-//	return re;
-//}
+uint32_t WritebackdatatoDisk() {
+	sgx_thread_mutex_lock(&lock);
+	uint32_t re = 0;
+	std::map<int,uf*>::iterator tamuf;
+	for (tamuf = userfile->begin(); tamuf != userfile->end(); tamuf++) {
+		Updatefileindisk((int*)&re, tamuf->first, (uint8_t*)tamuf->second, ENFILELEN);
+	}
+	sgx_thread_mutex_unlock(&lock);
+	return re;
+}

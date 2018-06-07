@@ -5,12 +5,20 @@
 #include "acBucket.h"
 #include "sgx_tcrypto.h"
 #include "sgx_tseal.h"
+#include "sgx_thread.h"
 #include "ipp/ippcp.h"
 #include "sgx_tae_service.h"
+#include<thread>
 #include <map>
 #include <queue>
 #define SharedKey 592
 #define ORDSIZE 8
+
+sgx_thread_mutex_t GK_mutex = SGX_THREAD_MUTEX_INITIALIZER;
+sgx_thread_mutex_t GA_mutex = SGX_THREAD_MUTEX_INITIALIZER;
+sgx_thread_mutex_t GC_mutex = SGX_THREAD_MUTEX_INITIALIZER;
+sgx_thread_mutex_t Q_mutex = SGX_THREAD_MUTEX_INITIALIZER;
+
 vector<Block> *blocks=new vector<Block>();
 vector<Bucket> *buckets = new vector<Bucket>();
 vector<acBucket> *acbuckets=new vector<acBucket>();
@@ -1061,6 +1069,7 @@ std::string* SerializeMap(std::map<int, int> *tem)
 typedef struct Tofileenclave {
 	int dataid;
 	sgx_ec256_dh_shared_t userkey;
+	int ac;
 };
 int GetdatatoClient(int ID,uint8_t* data, size_t len, uint8_t* Enuserdata, size_t Enlen) {
 	rh temdata;
@@ -1070,7 +1079,10 @@ int GetdatatoClient(int ID,uint8_t* data, size_t len, uint8_t* Enuserdata, size_
 	sec *userac;
 	uint8_t* replaydata;
 	int topid = -1;
-	if (GlobalacManagement->count(ID) == 0) {
+	sgx_thread_mutex_lock(&GA_mutex);
+	int isexist = GlobalacManagement->count(ID);
+	sgx_thread_mutex_unlock(&GA_mutex);
+	if ( isexist== 0) {
 		//读数据from disk
 		uint8_t *userdata;
 		size_t datalen;
@@ -1086,28 +1098,48 @@ int GetdatatoClient(int ID,uint8_t* data, size_t len, uint8_t* Enuserdata, size_
 		if (re != SGX_SUCCESS) {
 			return re;
 		}
-		if (FIFOqueue->size() < 20000) {
+		sgx_thread_mutex_lock(&Q_mutex);
+		int fisize = FIFOqueue->size();
+		sgx_thread_mutex_unlock(&Q_mutex);
+		if ( fisize< 20000) {
+			sgx_thread_mutex_lock(&Q_mutex);
 			FIFOqueue->push(ID);
+			sgx_thread_mutex_unlock(&Q_mutex);
+			sgx_thread_mutex_lock(&GK_mutex);
 			GlobalKeyManagement->insert(pair<int, skey>(ID, tem));//将用户秘钥放入map
+			sgx_thread_mutex_unlock(&GK_mutex);
 		}
 		else
 		{
 			flag = 1;
+			sgx_thread_mutex_lock(&Q_mutex);
 			topid = FIFOqueue->front();
 			FIFOqueue->pop();
+			sgx_thread_mutex_unlock(&Q_mutex);
 			//将要移除的用户数据打包传到disk
+			sgx_thread_mutex_lock(&GA_mutex);
 			int acsize = GlobalacManagement->find(topid)->second->size() * 8;
+			sgx_thread_mutex_unlock(&GA_mutex);
 			earsedata = (sec*)malloc(sizeof(sec)+acsize);
 			memset(earsedata,0, sizeof(sec) + acsize);
+			sgx_thread_mutex_lock(&GC_mutex);
 			earsedata->mc = GlobalCountManagement->find(topid)->second;
-			GetUscount(&GlobalCountManagement->find(topid)->second,&earsedata->mc_value);
-			std::string *Smap = SerializeMap(GlobalacManagement->find(topid)->second);
+			sgx_mc_uuid_t tmpuuid = GlobalCountManagement->find(topid)->second;
+			sgx_thread_mutex_unlock(&GC_mutex);
+			GetUscount(&tmpuuid,&earsedata->mc_value);
+			sgx_thread_mutex_lock(&GA_mutex);
+			std::map<int, int> *tmpacmap = GlobalacManagement->find(topid)->second;
+			sgx_thread_mutex_unlock(&GA_mutex);
+			std::string *Smap = SerializeMap(tmpacmap);
 			memcpy(earsedata->secret,(uint8_t*)Smap->c_str(), acsize);
 			uint8_t *sealeardata = new uint8_t[560+sizeof(sec)+acsize];
 			Sealdata((uint8_t*)earsedata,sizeof(sec)+acsize,sealeardata);
 			free(earsedata);
 			uint8_t sealearkey[SharedKey];
-			Sealdata(GlobalKeyManagement->find(topid)->second.sharekey,SGX_ECP256_KEY_SIZE,sealearkey);
+			sgx_thread_mutex_lock(&GK_mutex);
+			uint8_t *tpkey = GlobalKeyManagement->find(topid)->second.sharekey;
+			sgx_thread_mutex_unlock(&GK_mutex);
+			Sealdata(tpkey,SGX_ECP256_KEY_SIZE,sealearkey);
 			replaydata = (uint8_t*)malloc(SharedKey+580+acsize);
 			memset(replaydata,0, SharedKey + 580 + acsize);
 			memcpy(replaydata,sealearkey,SharedKey);
@@ -1118,10 +1150,18 @@ int GetdatatoClient(int ID,uint8_t* data, size_t len, uint8_t* Enuserdata, size_
 			if (srs != SGX_SUCCESS) {
 				return -3;
 			}
+			sgx_thread_mutex_lock(&GK_mutex);
 			GlobalKeyManagement->erase(topid);//从keymap中移除最先进来的用户key
+			sgx_thread_mutex_unlock(&GK_mutex);
+			sgx_thread_mutex_lock(&GC_mutex);
 			GlobalCountManagement->erase(topid);//移除计数器
+			sgx_thread_mutex_unlock(&GC_mutex);
+			sgx_thread_mutex_lock(&GA_mutex);
 			GlobalacManagement->erase(topid);//移除ac
+			sgx_thread_mutex_unlock(&GA_mutex);
+			sgx_thread_mutex_lock(&GK_mutex);
 			GlobalKeyManagement->insert(pair<int, skey>(ID, tem));//将用户秘钥放入map
+			sgx_thread_mutex_unlock(&GK_mutex);
 			free(replaydata);
 		}
 		userac = (sec*)malloc(datalen - SharedKey - 560);
@@ -1152,8 +1192,9 @@ int GetdatatoClient(int ID,uint8_t* data, size_t len, uint8_t* Enuserdata, size_
 		uint32_t mc_value = 0;
 		re = GetUscount(&userac->mc, &mc_value);
 		//printint(mc_value);
+		sgx_thread_mutex_lock(&GC_mutex);
 		GlobalCountManagement->insert(pair<int, sgx_mc_uuid_t>(ID, userac->mc));//将用户计数器ID放入map
-	
+		sgx_thread_mutex_unlock(&GC_mutex);
 		if (re != SGX_SUCCESS || mc_value != temdata.Scount) {
 			re = -2;
 			return re;
@@ -1168,8 +1209,9 @@ int GetdatatoClient(int ID,uint8_t* data, size_t len, uint8_t* Enuserdata, size_
 			useractable->insert(pair<int, int>(a, b));
 			loca++;
 		}
-
+		sgx_thread_mutex_lock(&GA_mutex);
 		GlobalacManagement->insert(pair<int, map<int, int> *>(ID, useractable));//将用户权限表放入map
+		sgx_thread_mutex_unlock(&GA_mutex);
 		free(userac);
 		free(userdata);
 	}
@@ -1177,7 +1219,10 @@ int GetdatatoClient(int ID,uint8_t* data, size_t len, uint8_t* Enuserdata, size_
 	{
 		uint8_t *pldata;
 		pldata = (uint8_t*)malloc(len);
-		AES_Decryptcbc(GlobalKeyManagement->find(ID)->second.sharekey, SGX_ECP256_KEY_SIZE, data, pldata, len);//解密用户端传来的请求
+		sgx_thread_mutex_lock(&GK_mutex);
+		uint8_t *tamkey = GlobalKeyManagement->find(ID)->second.sharekey;
+		sgx_thread_mutex_unlock(&GK_mutex);
+		AES_Decryptcbc(tamkey, SGX_ECP256_KEY_SIZE, data, pldata, len);//解密用户端传来的请求
 		memcpy(&temdata.ID, pldata, sizeof(int));
 		memcpy(&temdata.Scount, pldata + sizeof(int), sizeof(int));
 		memcpy(&temdata.dataid, pldata + 2 * sizeof(int), sizeof(int));
@@ -1185,12 +1230,21 @@ int GetdatatoClient(int ID,uint8_t* data, size_t len, uint8_t* Enuserdata, size_
 		delete pldata;
 	}
 	//查询该用户是否对该数据拥有操作权限
-	if (GlobalacManagement->find(ID)->second->find(temdata.dataid)->second >= temdata.ac) {
+	sgx_thread_mutex_lock(&GA_mutex);
+	int tmac = GlobalacManagement->find(ID)->second->find(temdata.dataid)->second;
+	sgx_thread_mutex_unlock(&GA_mutex);
+	if (tmac >= temdata.ac) {
+		
+		sgx_thread_mutex_lock(&GC_mutex);
 		UpdateUscount(&GlobalCountManagement->find(ID)->second);
+		sgx_thread_mutex_unlock(&GC_mutex);
 		Tofileenclave tamp;
+		tamp.ac = tmac;
 		tamp.dataid = temdata.dataid;
-		//printint(tamp.dataid);
-		memcpy(tamp.userkey.s, GlobalKeyManagement->find(ID)->second.sharekey,SGX_ECP256_KEY_SIZE);
+		sgx_thread_mutex_lock(&GK_mutex);
+		uint8_t *tmpkey = GlobalKeyManagement->find(ID)->second.sharekey;
+		sgx_thread_mutex_unlock(&GK_mutex);
+		memcpy(tamp.userkey.s,tmpkey ,SGX_ECP256_KEY_SIZE);
 		size_t Tologicalendatalen = getEncryptdatalen(sizeof(Tofileenclave));
 		uint8_t *Endata2enclave = new uint8_t[Tologicalendatalen];
 		uint8_t *addlendata;

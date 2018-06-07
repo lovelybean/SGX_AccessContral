@@ -33,6 +33,11 @@
 #pragma comment(lib,"ws2_32.lib")
 sgx_enclave_id_t   eid;
 sgx_enclave_id_t   Leid;
+//睡眠函数
+void gosleep() 
+{
+	Sleep(60000);
+}
 //初始化文件
 int Initfile() {
 	std::fstream fs;
@@ -162,8 +167,16 @@ uint32_t Getuserfilefromenclave2(sgx_enclave_id_t dest_enclave_id,uint8_t* data,
 	sgx_status_t ret = SGX_SUCCESS;
 
 	ret = FindfileTOuser(dest_enclave_id, &status, data,len,Enuserdata,len2);
-	if (ret != 0) {
-		printf("find file error!!!");
+	if (ret == 0) {
+		printf("success read or write!!!");
+	}
+	else if(ret==-3)
+	{
+		printf("this file is writing now!!!!");
+	}
+	else
+	{
+		printf("Encounters an error!!!");
 	}
 	return ret;
 }
@@ -303,8 +316,10 @@ int InsertsharekeybyID(int id,uint8_t* data, size_t len) {
 	return re;
 }
 
+std::atomic_int SocketNum = 0;//记录当前socket数量
 //处理来自客户端的请求
 void DealClientRequest(SOCKET sockClient,sgx_enclave_id_t eid) {	
+	SocketNum++;
 	SSL *ssl;
 	SSL_CTX *ctx;
 	SSL_library_init();
@@ -413,6 +428,7 @@ void DealClientRequest(SOCKET sockClient,sgx_enclave_id_t eid) {
 	SSL_CTX_free(ctx);
 	closesocket(sockClient);
 	printf("断开与客户端的连接！！！");
+	SocketNum--;
 }
 //在enclave内生成计数器
 int Createcounter(sgx_enclave_id_t eid) {
@@ -616,24 +632,39 @@ uint32_t Enfileindisk(std::string fileurl,int dataid) {
 	fs.close();
 	return updated;
 }
+//用来写文件到disk
+void WriteFiletodisk() 
+{
+	uint32_t re = 0;
+	while (1) {
+		Sleep(60000);
+		if (SocketNum == 0) WritebackdatatoDisk(Leid,&re);
+		if (re != 0) break;
+		printf("文件更新完成");
+	}
+	printf("更新文件出现error");
+}
 //开启多线程，线程1用来监听6000端口，线程2用来监听6001端口
 void StartServer()
 {	
 	sgx_status_t       ret = SGX_SUCCESS;
-	sgx_launch_token_t token = { 0 };
+	sgx_launch_token_t Ltoken = { 0 };
+	sgx_launch_token_t Ftoken = { 0 };
 	int updated = 0;
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
-	ret = sgx_create_enclave(ENCLAVE_FILE, SGX_DEBUG_FLAG, &token, &updated, &eid, NULL);
-	ret = sgx_create_enclave(ENCLAVE_LOGICFILE, SGX_DEBUG_FLAG, &token, &updated, &Leid, NULL);
+	ret = sgx_create_enclave(ENCLAVE_FILE, SGX_DEBUG_FLAG, &Ftoken, &updated, &eid, NULL);
+	ret = sgx_create_enclave(ENCLAVE_LOGICFILE, SGX_DEBUG_FLAG, &Ltoken, &updated, &Leid, NULL);
 	//初始化文件
 	Initfile();
 	uint32_t rs = 0;
 	Buildsecurepath(eid, &rs, eid, Leid);
 	std::thread t1(getClientcon,eid);
 	std::thread t2(getProxycon,eid);
+	std::thread t3(WriteFiletodisk);
 	t1.join();
 	t2.join();
+	t3.join();
 	sgx_destroy_enclave(eid);
 	sgx_destroy_enclave(Leid);
 	WSACleanup();
@@ -643,4 +674,8 @@ void StartServer()
 //typedef int(*sample_enroll)(int sp_credentials, sample_spid_t* spid,
 //	int* authentication_token);
 //sample_spid_t g_spid;
+
+
+void AES_EnIntegrateAONT_CBC(uint8_t *plaintext,uint8_t *Entext) {
+}
 
