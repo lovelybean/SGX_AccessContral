@@ -8,7 +8,6 @@
 #include "sgx_thread.h"
 #include "ipp/ippcp.h"
 #include "sgx_tae_service.h"
-#include<thread>
 #include <map>
 #include <queue>
 #define SharedKey 592
@@ -1071,7 +1070,23 @@ typedef struct Tofileenclave {
 	sgx_ec256_dh_shared_t userkey;
 	int ac;
 };
-int GetdatatoClient(int ID,uint8_t* data, size_t len, uint8_t* Enuserdata, size_t Enlen) {
+typedef struct UserRequest {
+	uint32_t ID;
+	uint32_t len;
+	uint8_t data[16];
+};
+int Requestislegal(int ID, uint8_t* data, size_t len, uint8_t *Response, size_t Reslen);
+uint32_t AnalysisRequest(uint8_t *request, size_t len, uint8_t *Response, size_t Reslen) {
+	uint32_t re = 0;
+	uint8_t *Derequest = new uint8_t[len];
+	UserRequest tampR;
+	re = AES_Decryptcbc(dh_aek, sizeof(sgx_aes_ctr_128bit_key_t),request,Derequest,len);
+	memcpy((uint8_t*)&tampR,Derequest,sizeof(tampR));
+	delete[] Derequest;
+	re=Requestislegal(tampR.ID,tampR.data,tampR.len,Response,Reslen);
+	return re;
+}
+int Requestislegal(int ID,uint8_t* data, size_t len, uint8_t *Response, size_t Reslen) {
 	rh temdata;
 	int flag = 0;
 	sec *earsedata;
@@ -1239,7 +1254,7 @@ int GetdatatoClient(int ID,uint8_t* data, size_t len, uint8_t* Enuserdata, size_
 		UpdateUscount(&GlobalCountManagement->find(ID)->second);
 		sgx_thread_mutex_unlock(&GC_mutex);
 		Tofileenclave tamp;
-		tamp.ac = tmac;
+		tamp.ac = temdata.ac;
 		tamp.dataid = temdata.dataid;
 		sgx_thread_mutex_lock(&GK_mutex);
 		uint8_t *tmpkey = GlobalKeyManagement->find(ID)->second.sharekey;
@@ -1251,12 +1266,13 @@ int GetdatatoClient(int ID,uint8_t* data, size_t len, uint8_t* Enuserdata, size_
 		addlendata = (uint8_t*)malloc(Tologicalendatalen);
 		memset(addlendata,0,Tologicalendatalen);
 		memcpy(addlendata,&tamp,sizeof(Tofileenclave));
-		AES_Encryptcbc(dh_aek, sizeof(sgx_aes_ctr_128bit_key_t), addlendata, Tologicalendatalen, Endata2enclave);
+		re=AES_Encryptcbc(dh_aek, sizeof(sgx_aes_ctr_128bit_key_t), addlendata, Tologicalendatalen, Endata2enclave);
 		free(addlendata);
 		/*uint8_t usershuju[1024];
 		memset(usershuju,0,1024);
 		Encryptusershuju((int*)&re,temdata.dataid, usershuju, 1024);*/
-		Getuserfilefromenclave2(&re,enclave2_id,Endata2enclave,Tologicalendatalen,Enuserdata,1024);
+		memcpy(Response,Endata2enclave,Tologicalendatalen);
+		//Getuserfilefromenclave2(&re,enclave2_id,Endata2enclave,Tologicalendatalen);
 		delete[] Endata2enclave;
 		//re=AES_Encryptcbc(GlobalKeyManagement->find(ID)->second.sharekey,SGX_ECP256_KEY_SIZE,usershuju,sizeof(usershuju),Enuserdata);
 		

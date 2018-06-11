@@ -16,14 +16,6 @@ typedef struct ms_exchange_report_t {
 	uint32_t ms_session_id;
 } ms_exchange_report_t;
 
-typedef struct ms_FindfileTOuser_t {
-	uint32_t ms_retval;
-	uint8_t* ms_data;
-	size_t ms_len;
-	uint8_t* ms_Enuserdata;
-	size_t ms_len2;
-} ms_FindfileTOuser_t;
-
 typedef struct ms_Encryptuserfile_t {
 	uint32_t ms_retval;
 	uint8_t* ms_file;
@@ -31,6 +23,15 @@ typedef struct ms_Encryptuserfile_t {
 	uint8_t* ms_Entemfile;
 	size_t ms_outlen;
 } ms_Encryptuserfile_t;
+
+typedef struct ms_GetdatatoClient_t {
+	uint32_t ms_retval;
+	int ms_ID;
+	uint8_t* ms_data;
+	size_t ms_len;
+	uint8_t* ms_Enuserdata;
+	size_t ms_Enlen;
+} ms_GetdatatoClient_t;
 
 typedef struct ms_WritebackdatatoDisk_t {
 	uint32_t ms_retval;
@@ -55,6 +56,14 @@ typedef struct ms_Updatefileindisk_t {
 	uint8_t* ms_file;
 	size_t ms_len;
 } ms_Updatefileindisk_t;
+
+typedef struct ms_TransferRequestToL_t {
+	uint32_t ms_retval;
+	uint8_t* ms_request;
+	size_t ms_len;
+	uint8_t* ms_Response;
+	size_t ms_Reslen;
+} ms_TransferRequestToL_t;
 
 typedef struct ms_create_session_ocall_t {
 	sgx_status_t ms_retval;
@@ -148,6 +157,14 @@ static sgx_status_t SGX_CDECL Logical_enclave_Updatefileindisk(void* pms)
 	return SGX_SUCCESS;
 }
 
+static sgx_status_t SGX_CDECL Logical_enclave_TransferRequestToL(void* pms)
+{
+	ms_TransferRequestToL_t* ms = SGX_CAST(ms_TransferRequestToL_t*, pms);
+	ms->ms_retval = TransferRequestToL(ms->ms_request, ms->ms_len, ms->ms_Response, ms->ms_Reslen);
+
+	return SGX_SUCCESS;
+}
+
 static sgx_status_t SGX_CDECL Logical_enclave_create_session_ocall(void* pms)
 {
 	ms_create_session_ocall_t* ms = SGX_CAST(ms_create_session_ocall_t*, pms);
@@ -222,14 +239,15 @@ static sgx_status_t SGX_CDECL Logical_enclave_sgx_thread_set_multiple_untrusted_
 
 static const struct {
 	size_t nr_ocall;
-	void * func_addr[13];
+	void * func_addr[14];
 } ocall_table_Logical_enclave = {
-	13,
+	14,
 	{
 		(void*)(uintptr_t)Logical_enclave_Encryptusershuju,
 		(void*)(uintptr_t)Logical_enclave_disp,
 		(void*)(uintptr_t)Logical_enclave_gosleep,
 		(void*)(uintptr_t)Logical_enclave_Updatefileindisk,
+		(void*)(uintptr_t)Logical_enclave_TransferRequestToL,
 		(void*)(uintptr_t)Logical_enclave_create_session_ocall,
 		(void*)(uintptr_t)Logical_enclave_exchange_report_ocall,
 		(void*)(uintptr_t)Logical_enclave_close_session_ocall,
@@ -267,19 +285,6 @@ sgx_status_t exchange_report(sgx_enclave_id_t eid, uint32_t* retval, sgx_enclave
 	return status;
 }
 
-sgx_status_t FindfileTOuser(sgx_enclave_id_t eid, uint32_t* retval, uint8_t* data, size_t len, uint8_t* Enuserdata, size_t len2)
-{
-	sgx_status_t status;
-	ms_FindfileTOuser_t ms;
-	ms.ms_data = data;
-	ms.ms_len = len;
-	ms.ms_Enuserdata = Enuserdata;
-	ms.ms_len2 = len2;
-	status = sgx_ecall(eid, 2, &ocall_table_Logical_enclave, &ms);
-	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
-	return status;
-}
-
 sgx_status_t Encryptuserfile(sgx_enclave_id_t eid, uint32_t* retval, uint8_t* file, size_t len, uint8_t* Entemfile, size_t outlen)
 {
 	sgx_status_t status;
@@ -288,6 +293,20 @@ sgx_status_t Encryptuserfile(sgx_enclave_id_t eid, uint32_t* retval, uint8_t* fi
 	ms.ms_len = len;
 	ms.ms_Entemfile = Entemfile;
 	ms.ms_outlen = outlen;
+	status = sgx_ecall(eid, 2, &ocall_table_Logical_enclave, &ms);
+	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
+	return status;
+}
+
+sgx_status_t GetdatatoClient(sgx_enclave_id_t eid, uint32_t* retval, int ID, uint8_t* data, size_t len, uint8_t* Enuserdata, size_t Enlen)
+{
+	sgx_status_t status;
+	ms_GetdatatoClient_t ms;
+	ms.ms_ID = ID;
+	ms.ms_data = data;
+	ms.ms_len = len;
+	ms.ms_Enuserdata = Enuserdata;
+	ms.ms_Enlen = Enlen;
 	status = sgx_ecall(eid, 3, &ocall_table_Logical_enclave, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;

@@ -479,7 +479,7 @@ void ChangeAC(int id,int dataid,int ac)
 void main()
 {
 	/*GetScertfromProxy(1);*/
-	GetDatafromServer(0,2,1);
+	GetDatafromServer(0,0,1);
 	printf("\n%s\n", (char*)realdata);
 	system("pause");
 } 

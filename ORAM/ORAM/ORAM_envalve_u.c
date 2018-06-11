@@ -90,14 +90,13 @@ typedef struct ms_Insertskey_t {
 	size_t ms_len;
 } ms_Insertskey_t;
 
-typedef struct ms_GetdatatoClient_t {
-	int ms_retval;
-	int ms_ID;
-	uint8_t* ms_data;
+typedef struct ms_AnalysisRequest_t {
+	uint32_t ms_retval;
+	uint8_t* ms_request;
 	size_t ms_len;
-	uint8_t* ms_Enuserdata;
-	size_t ms_Enlen;
-} ms_GetdatatoClient_t;
+	uint8_t* ms_Response;
+	size_t ms_Reslen;
+} ms_AnalysisRequest_t;
 
 typedef struct ms_Buildsecurepath_t {
 	uint32_t ms_retval;
@@ -200,15 +199,6 @@ typedef struct ms_disp_t {
 	uint8_t* ms_pbuf;
 	size_t ms_len;
 } ms_disp_t;
-
-typedef struct ms_Getuserfilefromenclave2_t {
-	uint32_t ms_retval;
-	sgx_enclave_id_t ms_dest_enclave_id;
-	uint8_t* ms_data;
-	size_t ms_len;
-	uint8_t* ms_Enuserdata;
-	size_t ms_len2;
-} ms_Getuserfilefromenclave2_t;
 
 typedef struct ms_create_session_ocall_t {
 	sgx_status_t ms_retval;
@@ -399,14 +389,6 @@ static sgx_status_t SGX_CDECL ORAM_envalve_disp(void* pms)
 	return SGX_SUCCESS;
 }
 
-static sgx_status_t SGX_CDECL ORAM_envalve_Getuserfilefromenclave2(void* pms)
-{
-	ms_Getuserfilefromenclave2_t* ms = SGX_CAST(ms_Getuserfilefromenclave2_t*, pms);
-	ms->ms_retval = Getuserfilefromenclave2(ms->ms_dest_enclave_id, ms->ms_data, ms->ms_len, ms->ms_Enuserdata, ms->ms_len2);
-
-	return SGX_SUCCESS;
-}
-
 static sgx_status_t SGX_CDECL ORAM_envalve_create_session_ocall(void* pms)
 {
 	ms_create_session_ocall_t* ms = SGX_CAST(ms_create_session_ocall_t*, pms);
@@ -481,9 +463,9 @@ static sgx_status_t SGX_CDECL ORAM_envalve_sgx_thread_set_multiple_untrusted_eve
 
 static const struct {
 	size_t nr_ocall;
-	void * func_addr[26];
+	void * func_addr[25];
 } ocall_table_ORAM_envalve = {
-	26,
+	25,
 	{
 		(void*)(uintptr_t)ORAM_envalve_printblock,
 		(void*)(uintptr_t)ORAM_envalve_printint,
@@ -501,7 +483,6 @@ static const struct {
 		(void*)(uintptr_t)ORAM_envalve_exchange_report_lo,
 		(void*)(uintptr_t)ORAM_envalve_printhash,
 		(void*)(uintptr_t)ORAM_envalve_disp,
-		(void*)(uintptr_t)ORAM_envalve_Getuserfilefromenclave2,
 		(void*)(uintptr_t)ORAM_envalve_create_session_ocall,
 		(void*)(uintptr_t)ORAM_envalve_exchange_report_ocall,
 		(void*)(uintptr_t)ORAM_envalve_close_session_ocall,
@@ -686,15 +667,14 @@ sgx_status_t Insertskey(sgx_enclave_id_t eid, int* retval, uint8_t* sealkey, siz
 	return status;
 }
 
-sgx_status_t GetdatatoClient(sgx_enclave_id_t eid, int* retval, int ID, uint8_t* data, size_t len, uint8_t* Enuserdata, size_t Enlen)
+sgx_status_t AnalysisRequest(sgx_enclave_id_t eid, uint32_t* retval, uint8_t* request, size_t len, uint8_t* Response, size_t Reslen)
 {
 	sgx_status_t status;
-	ms_GetdatatoClient_t ms;
-	ms.ms_ID = ID;
-	ms.ms_data = data;
+	ms_AnalysisRequest_t ms;
+	ms.ms_request = request;
 	ms.ms_len = len;
-	ms.ms_Enuserdata = Enuserdata;
-	ms.ms_Enlen = Enlen;
+	ms.ms_Response = Response;
+	ms.ms_Reslen = Reslen;
 	status = sgx_ecall(eid, 16, &ocall_table_ORAM_envalve, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;

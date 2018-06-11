@@ -25,7 +25,8 @@ enclave {
 		public int ComputeSharekey([in,size=len]uint8_t *px, [in,size=len]uint8_t *py,size_t len);
 		public int gettestdata([out,size=len]uint8_t *data,size_t len);
 		public int Insertskey([out,size=len]uint8_t* sealkey,size_t len);
-		public int GetdatatoClient(int ID,[in,size=len]uint8_t* data,size_t len,[out,size=Enlen]uint8_t* Enuserdata,size_t Enlen);
+		//public int GetdatatoClient(int ID,[in,size=len]uint8_t* data,size_t len,[out,size=Enlen]uint8_t* Enuserdata,size_t Enlen);
+		public uint32_t AnalysisRequest([in,size=len]uint8_t *request,size_t len,[out,size=Reslen]uint8_t *Response, size_t Reslen);
 		public uint32_t Buildsecurepath(sgx_enclave_id_t src_enclave_id, sgx_enclave_id_t dest_enclave_id);
     };
 
@@ -51,6 +52,6 @@ enclave {
 		//test hash
 		void printhash([in,size=len]uint8_t* dhash,size_t len);
 		void disp([in,size=len]uint8_t *pbuf,size_t len);
-		uint32_t Getuserfilefromenclave2(sgx_enclave_id_t dest_enclave_id,[in,size=len]uint8_t* data,size_t len,[out,size=len2]uint8_t *Enuserdata,size_t len2);
+		//uint32_t Getuserfilefromenclave2(sgx_enclave_id_t dest_enclave_id,[in,size=len]uint8_t* data,size_t len);
     };
 };

@@ -1,19 +1,22 @@
 ﻿C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(392,5): warning MSB8028: The intermediate directory (x64\Simulation\) contains files shared from another project (Get_file_enclave.vcxproj).  This can lead to incorrect clean and rebuild behavior.
   Creating proxy/bridge routines
   Logical_enclave.cpp
-Logical_enclave.cpp(18): warning C4200: 使用了非标准扩展: 结构/联合中的零大小数组
-  Logical_enclave.cpp(18): note: 默认构造函数或 copy/move 赋值运算符将忽略此成员
-Logical_enclave.cpp(69): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-Logical_enclave.cpp(74): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+Logical_enclave.cpp(19): warning C4200: 使用了非标准扩展: 结构/联合中的零大小数组
+  Logical_enclave.cpp(19): note: 默认构造函数或 copy/move 赋值运算符将忽略此成员
+Logical_enclave.cpp(70): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
 Logical_enclave.cpp(75): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-Logical_enclave.cpp(87): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-Logical_enclave.cpp(92): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+Logical_enclave.cpp(76): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+Logical_enclave.cpp(88): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
 Logical_enclave.cpp(93): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+Logical_enclave.cpp(94): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
 Logical_enclave.cpp(108): warning C4091: “typedef ”: 没有声明变量时忽略“Tofileenclave”的左侧
-Logical_enclave.cpp(148): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
-Logical_enclave.cpp(225): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
-Logical_enclave.cpp(238): warning C4267: “初始化”: 从“size_t”转换到“uint32_t”，可能丢失数据
-Logical_enclave.cpp(239): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
+Logical_enclave.cpp(113): warning C4091: “typedef ”: 没有声明变量时忽略“UserRequest”的左侧
+Logical_enclave.cpp(135): warning C4267: “=”: 从“size_t”转换到“uint32_t”，可能丢失数据
+Logical_enclave.cpp(128): warning C4101: “tampF”: 未引用的局部变量
+Logical_enclave.cpp(187): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+Logical_enclave.cpp(264): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
+Logical_enclave.cpp(277): warning C4267: “初始化”: 从“size_t”转换到“uint32_t”，可能丢失数据
+Logical_enclave.cpp(278): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
   Logical_enclave_t.c
     正在创建库 E:\ORAM\x64\Simulation\Logical_enclave.lib 和对象 E:\ORAM\x64\Simulation\Logical_enclave.exp
   Logical_enclave.vcxproj -> E:\ORAM\x64\Simulation\Logical_enclave.dll

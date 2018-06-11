@@ -31,7 +31,7 @@
 #define SERVER_KEY      "C:\\Server\\key.pem"
 
 #pragma comment(lib,"ws2_32.lib")
-sgx_enclave_id_t   eid;
+sgx_enclave_id_t   Feid;
 sgx_enclave_id_t   Leid;
 //睡眠函数
 void gosleep() 
@@ -59,7 +59,7 @@ int Initfile() {
 		fs.read((char*)file, MAXBUF);
 		uint8_t Enfilelen[ENFILELEN];
 		fs.close();
-		Encryptuserfile(Leid, &re, file, MAXBUF, Enfilelen, ENFILELEN);
+		Encryptuserfile(Feid, &re, file, MAXBUF, Enfilelen, ENFILELEN);
 		delete[] file;
 		std::string url2 = "E:\\Server_file\\" + std::to_string(i) + ".txt";
 		fs.open(url2, std::ios::app | std::ios::out | std::ios::binary);
@@ -161,26 +161,31 @@ uint32_t exchange_report_lo(sgx_enclave_id_t src_enclave_id, sgx_enclave_id_t de
 	return ret;
 }
 //传输数据到enclave2
-uint32_t Getuserfilefromenclave2(sgx_enclave_id_t dest_enclave_id,uint8_t* data, size_t len, uint8_t *Enuserdata, size_t len2)
-{
-	uint32_t status = 0;
-	sgx_status_t ret = SGX_SUCCESS;
-
-	ret = FindfileTOuser(dest_enclave_id, &status, data,len,Enuserdata,len2);
-	if (ret == 0) {
-		printf("success read or write!!!");
-	}
-	else if(ret==-3)
-	{
-		printf("this file is writing now!!!!");
-	}
-	else
-	{
-		printf("Encounters an error!!!");
-	}
-	return ret;
+//uint32_t Getuserfilefromenclave2(sgx_enclave_id_t dest_enclave_id,uint8_t* data, size_t len)
+//{
+//	uint32_t status = 0;
+//	sgx_status_t ret = SGX_SUCCESS;
+//
+//	ret = FindfileTOuser(dest_enclave_id, &status, data,len);
+//	if (ret == 0) {
+//		printf("success read or write!!!");
+//	}
+//	else if(ret==-3)
+//	{
+//		printf("this file is writing now!!!!");
+//	}
+//	else
+//	{
+//		printf("Encounters an error!!!");
+//	}
+//	return ret;
+//}
+//请求发送到Oram_enclave
+uint32_t TransferRequestToL(uint8_t *request, size_t len, uint8_t *Response, size_t Reslen) {
+	uint32_t re = 0;
+	AnalysisRequest(Leid,&re,request,len,Response,Reslen);
+	return re;
 }
-
 int aes_encrypt(char* in, unsigned char* key, char* out)//, int olen)可能会设置buf长度
 {
 	if (!in || !key || !out) return 0;
@@ -409,12 +414,12 @@ void DealClientRequest(SOCKET sockClient,sgx_enclave_id_t eid) {
 		int result = 1;
 		uint8_t Enuserdata[1024];
 		memset(Enuserdata,0,1024);
-		GetdatatoClient(eid,&result,ID,DataFromClient,sizeof(DataFromClient),Enuserdata,sizeof(Enuserdata));
-		int ttt = 0;
+		GetdatatoClient(Feid, (uint32_t*)&result, ID, DataFromClient, sizeof(DataFromClient), Enuserdata, sizeof(Enuserdata));
+		
 		if (result == SGX_SUCCESS) {
 			
-			ttt=SSL_write(ssl, &result, sizeof(int));
-			ttt=SSL_write(ssl,Enuserdata,sizeof(Enuserdata));
+			SSL_write(ssl, &result, sizeof(int));
+			SSL_write(ssl,Enuserdata,sizeof(Enuserdata));
 		}
 		else
 		{
@@ -653,20 +658,20 @@ void StartServer()
 	int updated = 0;
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
-	ret = sgx_create_enclave(ENCLAVE_FILE, SGX_DEBUG_FLAG, &Ftoken, &updated, &eid, NULL);
-	ret = sgx_create_enclave(ENCLAVE_LOGICFILE, SGX_DEBUG_FLAG, &Ltoken, &updated, &Leid, NULL);
+	ret = sgx_create_enclave(ENCLAVE_FILE, SGX_DEBUG_FLAG, &Ftoken, &updated, &Leid, NULL);
+	ret = sgx_create_enclave(ENCLAVE_LOGICFILE, SGX_DEBUG_FLAG, &Ltoken, &updated, &Feid, NULL);
 	//初始化文件
 	Initfile();
 	uint32_t rs = 0;
-	Buildsecurepath(eid, &rs, eid, Leid);
-	std::thread t1(getClientcon,eid);
-	std::thread t2(getProxycon,eid);
+	Buildsecurepath(Leid, &rs, Leid, Feid);
+	std::thread t1(getClientcon,Leid);
+	std::thread t2(getProxycon,Leid);
 	std::thread t3(WriteFiletodisk);
 	t1.join();
 	t2.join();
 	t3.join();
-	sgx_destroy_enclave(eid);
 	sgx_destroy_enclave(Leid);
+	sgx_destroy_enclave(Feid);
 	WSACleanup();
 }
 
@@ -676,6 +681,84 @@ void StartServer()
 //sample_spid_t g_spid;
 
 
-void AES_EnIntegrateAONT_CBC(uint8_t *plaintext,uint8_t *Entext) {
-}
 
+
+//按位进行异或运算
+void XORcompute(uint8_t *a,uint8_t *b,uint8_t *re,size_t len) {
+	for (int i = 0; i < len;i++) {
+		re[i] = a[i] ^ b[i];
+	}
+}
+//使用AONT优化aes_cbc加密算法
+void AES_EnIntegrateAONT_CBC(uint8_t *plaintext,size_t plaintextlen,uint8_t *key,size_t keylen,uint8_t *Entext) {
+	BIGNUM *randKey;
+	randKey = BN_new();//k'
+	uint8_t *replaintext;//m
+	uint8_t *tampreplaintext;//m'
+	size_t repsize = plaintextlen;//按照16字节整数倍补全后的数据长度
+	BN_rand(randKey,128,-1,0);//随机生成一个128位的key
+	unsigned char Crandkey[16];
+	BN_bn2bin(randKey,Crandkey);//将大数转化成unsigned char
+	BN_clear_free(randKey);//清内存
+	//补全数据为16的整数倍
+	if (plaintextlen % 16 != 0) 
+	{
+		repsize = plaintextlen + (16 - (plaintextlen % 16));
+		replaintext = new uint8_t[repsize];
+		tampreplaintext = new uint8_t[repsize];
+		memset(tampreplaintext,0,repsize);
+		memset(replaintext,0,repsize);
+		memcpy(replaintext,plaintext,plaintextlen);
+	}
+	else
+	{
+		replaintext = new uint8_t[repsize];
+		tampreplaintext = new uint8_t[repsize];
+		memset(replaintext, 0, repsize);
+		memset(tampreplaintext, 0, repsize);
+		memcpy(replaintext,plaintext,plaintextlen);
+	}
+	AES_KEY tampkey;
+	AES_set_encrypt_key(Crandkey,128,&tampkey);
+	//Ek'(i)
+	for (int i = 0; i < (repsize/16);i++) {
+		uint8_t tamp[16];
+		memset(tamp,0,sizeof(tamp));
+		memcpy(tamp,&i,sizeof(int));
+		AES_encrypt((const unsigned char*)tamp,tampreplaintext+(16*i),&tampkey);
+	}
+	//mi与Ek'(i)异或运算,计算m'
+	for (int i = 0; i < (repsize / 16); i++) {
+		XORcompute(replaintext+(16*i),tampreplaintext+(16*i),tampreplaintext+(16*i),16);
+	}
+	//计算hi
+	AES_KEY publickey;
+	AES_set_encrypt_key(key,keylen*8,&publickey);
+	uint8_t *h = new uint8_t[repsize];
+	for (int i = 0; i < (repsize / 16); i++) {
+		uint8_t tamp[16];
+		memset(tamp, 0, sizeof(tamp));
+		memcpy(tamp, &i, sizeof(int));
+		XORcompute(tampreplaintext+(16*i),tamp,h+(16*i),16);
+		AES_encrypt(h+(16*i), h + (16 * i),&publickey);
+	}
+	//计算ms'
+	uint8_t ms[16];
+	memcpy(ms,Crandkey,sizeof(ms));
+	for (int i = 0; i < (repsize / 16); i++) 
+	{
+		XORcompute(h+(16*i),ms,ms,16);
+	}
+	memcpy(Entext,tampreplaintext,repsize);
+	memcpy(Entext+repsize,ms,sizeof(ms));
+	delete[] replaintext;
+	delete[] tampreplaintext;
+	delete[] h;
+}
+//AONT解密算法
+void AES_DeIntegrateAont_CBC(uint8_t *Entext,size_t Entextlen,uint8_t *key,size_t keylen,uint8_t *plaintext) {
+	//计算hi
+	AES_KEY publickey;
+	AES_set_encrypt_key(key,keylen*8,&publickey);
+
+}

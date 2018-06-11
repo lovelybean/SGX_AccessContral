@@ -7,6 +7,7 @@
 #include "ipp/ippcp.h"
 #include "sgx_trts.h"
 #include "sgx_thread.h"
+#include <atomic>
 #define ENFILELEN 1604
 sgx_key_128bit_t dh_aek;   // Session key
 sgx_dh_session_t sgx_dh_session;
@@ -97,7 +98,6 @@ uint32_t AES_Decryptcbc(uint8_t* key, size_t len, uint8_t *Entext, uint8_t *plai
 std::map<int,uf*> *userfile = new std::map<int,uf*>;
 std::queue<int> *FIFOqueue = new std::queue<int>;//用于保存FIFO的顺序，目前设置缓存为10000个文件
 std::map<int, int> *wfilelock = new std::map<int, int>;//用于保存锁，如果是写请求就将对应文件加锁。
-
 sgx_thread_mutex_t lock = SGX_THREAD_MUTEX_INITIALIZER;
 sgx_thread_mutex_t wf_mutex = SGX_THREAD_MUTEX_INITIALIZER;//文件写锁
 //sgx_thread_cond_t wc_cond = SGX_THREAD_COND_INITIALIZER;//条件锁
@@ -106,6 +106,45 @@ typedef struct Tofileenclave {
 	sgx_ec256_dh_shared_t userkey;
 	int ac;
 };
+typedef struct UserRequest {
+	uint32_t ID;
+	uint32_t len;
+	uint8_t data[16];
+};
+//get encrypt size 为了使要加密的数据长度为16的倍数，所以需要进行数据填充
+uint32_t getEncryptdatalen(int len) {
+	uint32_t size = 0;
+	if (len % 16 == 0) {
+		size = len;
+	}
+	else {
+		size = len + (16 - (len % 16));
+	}
+	return size;
+}
+uint32_t FindfileTOuser(uint8_t* data, size_t len, uint8_t *Enuserdata, size_t len2);
+uint32_t GetdatatoClient(int ID, uint8_t* data, size_t len, uint8_t* Enuserdata, size_t Enlen) {
+	UserRequest tampR;
+	Tofileenclave tampF;
+	int Responsesize = getEncryptdatalen(sizeof(tampF));
+	int Requestsize = getEncryptdatalen(sizeof(tampR));
+	uint8_t *Entampf = new uint8_t[Responsesize];
+	uint8_t *EnR=new uint8_t[Requestsize];
+	uint32_t re = 0;
+	tampR.ID = ID;
+	tampR.len = len;
+	memcpy(tampR.data,data,len);
+	memset(EnR,0,Requestsize);
+	memcpy(EnR,(uint8_t*)&tampR,sizeof(tampR));
+	re = AES_Encryptcbc(dh_aek,sizeof(sgx_aes_ctr_128bit_key_t),EnR,Requestsize,EnR);
+	TransferRequestToL(&re, EnR, Requestsize,Entampf,Responsesize);
+	delete[] EnR;
+	if (re == 0) {
+		re=FindfileTOuser(Entampf,Responsesize,Enuserdata,Enlen);
+	}
+	delete[] Entampf;
+	return re;
+}
 //增加计数器的值
 uint32_t UpdateCount(sgx_mc_uuid_t *mc,uint32_t *tmc_value) {
 	int busy_retry_times = 2;
@@ -208,9 +247,9 @@ uint32_t FindfileTOuser(uint8_t* data, size_t len, uint8_t *Enuserdata, size_t l
 		re = AES_Encryptcbc(tamp.userkey.s, SGX_ECP256_KEY_SIZE, userfile->find(tamp.dataid)->second->secret, 1024, Enuserdata);
 	}
 	//写完成，解锁
-	if (wtag== 1) {
-		sgx_thread_mutex_lock(&wf_mutex);
+	if (wtag== 1) {	
 		gosleep();//睡眠1分钟，模拟用户用写操作该文件。
+		sgx_thread_mutex_lock(&wf_mutex);
 		wfilelock->erase(wfilelock->find(tamp.dataid));
 		sgx_thread_mutex_unlock(&wf_mutex);
 	}
