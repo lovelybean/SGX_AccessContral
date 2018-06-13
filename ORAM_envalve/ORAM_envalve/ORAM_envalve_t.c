@@ -74,11 +74,20 @@ typedef struct ms_updatecount_t {
 
 typedef struct ms_DetectacData_t {
 	uint32_t ms_retval;
+	uint32_t ms_type;
 	uint8_t* ms_data;
 	size_t ms_len;
 	uint8_t* ms_Endata;
 	size_t ms_outlen;
 } ms_DetectacData_t;
+
+typedef struct ms_JudgeToken_t {
+	uint32_t ms_retval;
+	uint8_t* ms_token;
+	size_t ms_len;
+	uint8_t* ms_Entoken;
+	size_t ms_Elen;
+} ms_JudgeToken_t;
 
 typedef struct ms_GetServerpublickey_t {
 	int ms_retval;
@@ -181,6 +190,13 @@ typedef struct ms_Getuserdatafromdisk_t {
 	uint8_t* ms_userdata;
 	size_t ms_len;
 } ms_Getuserdatafromdisk_t;
+
+typedef struct ms_Keeptokenindisk_t {
+	uint32_t ms_retval;
+	uint32_t ms_ID;
+	uint8_t* ms_token;
+	size_t ms_len;
+} ms_Keeptokenindisk_t;
 
 typedef struct ms_UpdateshujutoServerdisk_t {
 	int ms_retval;
@@ -510,13 +526,56 @@ static sgx_status_t SGX_CDECL sgx_DetectacData(void* pms)
 
 		memset((void*)_in_Endata, 0, _len_Endata);
 	}
-	ms->ms_retval = DetectacData(_in_data, _tmp_len, _in_Endata, _tmp_outlen);
+	ms->ms_retval = DetectacData(ms->ms_type, _in_data, _tmp_len, _in_Endata, _tmp_outlen);
 err:
 	if (_in_data) free(_in_data);
 	if (_in_Endata) {
 		memcpy(_tmp_Endata, _in_Endata, _len_Endata);
 		free(_in_Endata);
 	}
+
+	return status;
+}
+
+static sgx_status_t SGX_CDECL sgx_JudgeToken(void* pms)
+{
+	ms_JudgeToken_t* ms = SGX_CAST(ms_JudgeToken_t*, pms);
+	sgx_status_t status = SGX_SUCCESS;
+	uint8_t* _tmp_token = ms->ms_token;
+	size_t _tmp_len = ms->ms_len;
+	size_t _len_token = _tmp_len;
+	uint8_t* _in_token = NULL;
+	uint8_t* _tmp_Entoken = ms->ms_Entoken;
+	size_t _tmp_Elen = ms->ms_Elen;
+	size_t _len_Entoken = _tmp_Elen;
+	uint8_t* _in_Entoken = NULL;
+
+	CHECK_REF_POINTER(pms, sizeof(ms_JudgeToken_t));
+	CHECK_UNIQUE_POINTER(_tmp_token, _len_token);
+	CHECK_UNIQUE_POINTER(_tmp_Entoken, _len_Entoken);
+
+	if (_tmp_token != NULL) {
+		_in_token = (uint8_t*)malloc(_len_token);
+		if (_in_token == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memcpy(_in_token, _tmp_token, _len_token);
+	}
+	if (_tmp_Entoken != NULL) {
+		_in_Entoken = (uint8_t*)malloc(_len_Entoken);
+		if (_in_Entoken == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memcpy(_in_Entoken, _tmp_Entoken, _len_Entoken);
+	}
+	ms->ms_retval = JudgeToken(_in_token, _tmp_len, _in_Entoken, _tmp_Elen);
+err:
+	if (_in_token) free(_in_token);
+	if (_in_Entoken) free(_in_Entoken);
 
 	return status;
 }
@@ -729,9 +788,9 @@ static sgx_status_t SGX_CDECL sgx_Buildsecurepath(void* pms)
 
 SGX_EXTERNC const struct {
 	size_t nr_ecall;
-	struct {void* call_addr; uint8_t is_priv;} ecall_table[18];
+	struct {void* call_addr; uint8_t is_priv;} ecall_table[19];
 } g_ecall_table = {
-	18,
+	19,
 	{
 		{(void*)(uintptr_t)sgx_SaveasBlock, 0},
 		{(void*)(uintptr_t)sgx_getBlock, 0},
@@ -745,6 +804,7 @@ SGX_EXTERNC const struct {
 		{(void*)(uintptr_t)sgx_createcount, 0},
 		{(void*)(uintptr_t)sgx_updatecount, 0},
 		{(void*)(uintptr_t)sgx_DetectacData, 0},
+		{(void*)(uintptr_t)sgx_JudgeToken, 0},
 		{(void*)(uintptr_t)sgx_GetServerpublickey, 0},
 		{(void*)(uintptr_t)sgx_ComputeSharekey, 0},
 		{(void*)(uintptr_t)sgx_gettestdata, 0},
@@ -756,35 +816,36 @@ SGX_EXTERNC const struct {
 
 SGX_EXTERNC const struct {
 	size_t nr_ocall;
-	uint8_t entry_table[25][18];
+	uint8_t entry_table[26][19];
 } g_dyn_entry_table = {
-	25,
+	26,
 	{
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
 	}
 };
 
@@ -1144,6 +1205,46 @@ sgx_status_t SGX_CDECL Getuserdatafromdisk(int ID, uint8_t* userdata, size_t len
 	return status;
 }
 
+sgx_status_t SGX_CDECL Keeptokenindisk(uint32_t* retval, uint32_t ID, uint8_t* token, size_t len)
+{
+	sgx_status_t status = SGX_SUCCESS;
+	size_t _len_token = len;
+
+	ms_Keeptokenindisk_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_Keeptokenindisk_t);
+	void *__tmp = NULL;
+
+	ocalloc_size += (token != NULL && sgx_is_within_enclave(token, _len_token)) ? _len_token : 0;
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_Keeptokenindisk_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_Keeptokenindisk_t));
+
+	ms->ms_ID = ID;
+	if (token != NULL && sgx_is_within_enclave(token, _len_token)) {
+		ms->ms_token = (uint8_t*)__tmp;
+		__tmp = (void *)((size_t)__tmp + _len_token);
+		memcpy(ms->ms_token, token, _len_token);
+	} else if (token == NULL) {
+		ms->ms_token = NULL;
+	} else {
+		sgx_ocfree();
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+	
+	ms->ms_len = len;
+	status = sgx_ocall(11, ms);
+
+	if (retval) *retval = ms->ms_retval;
+
+	sgx_ocfree();
+	return status;
+}
+
 sgx_status_t SGX_CDECL UpdateshujutoServerdisk(int* retval, int ID, uint8_t* data, size_t len)
 {
 	sgx_status_t status = SGX_SUCCESS;
@@ -1176,7 +1277,7 @@ sgx_status_t SGX_CDECL UpdateshujutoServerdisk(int* retval, int ID, uint8_t* dat
 	}
 	
 	ms->ms_len = len;
-	status = sgx_ocall(11, ms);
+	status = sgx_ocall(12, ms);
 
 	if (retval) *retval = ms->ms_retval;
 
@@ -1229,7 +1330,7 @@ sgx_status_t SGX_CDECL session_request_lo(uint32_t* retval, sgx_enclave_id_t src
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 	
-	status = sgx_ocall(12, ms);
+	status = sgx_ocall(13, ms);
 
 	if (retval) *retval = ms->ms_retval;
 	if (dh_msg1) memcpy((void*)dh_msg1, ms->ms_dh_msg1, _len_dh_msg1);
@@ -1285,7 +1386,7 @@ sgx_status_t SGX_CDECL exchange_report_lo(uint32_t* retval, sgx_enclave_id_t src
 	}
 	
 	ms->ms_session_id = session_id;
-	status = sgx_ocall(13, ms);
+	status = sgx_ocall(14, ms);
 
 	if (retval) *retval = ms->ms_retval;
 	if (dh_msg3) memcpy((void*)dh_msg3, ms->ms_dh_msg3, _len_dh_msg3);
@@ -1325,7 +1426,7 @@ sgx_status_t SGX_CDECL printhash(uint8_t* dhash, size_t len)
 	}
 	
 	ms->ms_len = len;
-	status = sgx_ocall(14, ms);
+	status = sgx_ocall(15, ms);
 
 
 	sgx_ocfree();
@@ -1363,7 +1464,7 @@ sgx_status_t SGX_CDECL disp(uint8_t* pbuf, size_t len)
 	}
 	
 	ms->ms_len = len;
-	status = sgx_ocall(15, ms);
+	status = sgx_ocall(16, ms);
 
 
 	sgx_ocfree();
@@ -1415,7 +1516,7 @@ sgx_status_t SGX_CDECL create_session_ocall(sgx_status_t* retval, uint32_t* sid,
 	
 	ms->ms_dh_msg1_size = dh_msg1_size;
 	ms->ms_timeout = timeout;
-	status = sgx_ocall(16, ms);
+	status = sgx_ocall(17, ms);
 
 	if (retval) *retval = ms->ms_retval;
 	if (sid) memcpy((void*)sid, ms->ms_sid, _len_sid);
@@ -1472,7 +1573,7 @@ sgx_status_t SGX_CDECL exchange_report_ocall(sgx_status_t* retval, uint32_t sid,
 	
 	ms->ms_dh_msg3_size = dh_msg3_size;
 	ms->ms_timeout = timeout;
-	status = sgx_ocall(17, ms);
+	status = sgx_ocall(18, ms);
 
 	if (retval) *retval = ms->ms_retval;
 	if (dh_msg3) memcpy((void*)dh_msg3, ms->ms_dh_msg3, _len_dh_msg3);
@@ -1500,7 +1601,7 @@ sgx_status_t SGX_CDECL close_session_ocall(sgx_status_t* retval, uint32_t sid, u
 
 	ms->ms_sid = sid;
 	ms->ms_timeout = timeout;
-	status = sgx_ocall(18, ms);
+	status = sgx_ocall(19, ms);
 
 	if (retval) *retval = ms->ms_retval;
 
@@ -1554,7 +1655,7 @@ sgx_status_t SGX_CDECL invoke_service_ocall(sgx_status_t* retval, uint8_t* pse_m
 	
 	ms->ms_pse_message_resp_size = pse_message_resp_size;
 	ms->ms_timeout = timeout;
-	status = sgx_ocall(19, ms);
+	status = sgx_ocall(20, ms);
 
 	if (retval) *retval = ms->ms_retval;
 	if (pse_message_resp) memcpy((void*)pse_message_resp, ms->ms_pse_message_resp, _len_pse_message_resp);
@@ -1595,7 +1696,7 @@ sgx_status_t SGX_CDECL sgx_oc_cpuidex(int cpuinfo[4], int leaf, int subleaf)
 	
 	ms->ms_leaf = leaf;
 	ms->ms_subleaf = subleaf;
-	status = sgx_ocall(20, ms);
+	status = sgx_ocall(21, ms);
 
 	if (cpuinfo) memcpy((void*)cpuinfo, ms->ms_cpuinfo, _len_cpuinfo);
 
@@ -1621,7 +1722,7 @@ sgx_status_t SGX_CDECL sgx_thread_wait_untrusted_event_ocall(int* retval, const 
 	__tmp = (void *)((size_t)__tmp + sizeof(ms_sgx_thread_wait_untrusted_event_ocall_t));
 
 	ms->ms_self = SGX_CAST(void*, self);
-	status = sgx_ocall(21, ms);
+	status = sgx_ocall(22, ms);
 
 	if (retval) *retval = ms->ms_retval;
 
@@ -1647,7 +1748,7 @@ sgx_status_t SGX_CDECL sgx_thread_set_untrusted_event_ocall(int* retval, const v
 	__tmp = (void *)((size_t)__tmp + sizeof(ms_sgx_thread_set_untrusted_event_ocall_t));
 
 	ms->ms_waiter = SGX_CAST(void*, waiter);
-	status = sgx_ocall(22, ms);
+	status = sgx_ocall(23, ms);
 
 	if (retval) *retval = ms->ms_retval;
 
@@ -1674,7 +1775,7 @@ sgx_status_t SGX_CDECL sgx_thread_setwait_untrusted_events_ocall(int* retval, co
 
 	ms->ms_waiter = SGX_CAST(void*, waiter);
 	ms->ms_self = SGX_CAST(void*, self);
-	status = sgx_ocall(23, ms);
+	status = sgx_ocall(24, ms);
 
 	if (retval) *retval = ms->ms_retval;
 
@@ -1713,7 +1814,7 @@ sgx_status_t SGX_CDECL sgx_thread_set_multiple_untrusted_events_ocall(int* retva
 	}
 	
 	ms->ms_total = total;
-	status = sgx_ocall(24, ms);
+	status = sgx_ocall(25, ms);
 
 	if (retval) *retval = ms->ms_retval;
 

@@ -23,7 +23,8 @@
 #define MSG_LEN 128
 #define MAXBUF 1024
 #define ENFILELEN 1604
-#define P2SDATA 44
+#define P2SDATA 48
+#define FP2SDATA 64
 #define SaveDatasize 580
 #define SharedKey 592
 #define CA_FILE			"C:\\CA\\cacert.pem"
@@ -320,7 +321,14 @@ int InsertsharekeybyID(int id,uint8_t* data, size_t len) {
 	else printf("can not find user's actable");
 	return re;
 }
-
+uint32_t Keeptokenindisk(uint32_t ID, uint8_t *token, size_t len) {
+	std::fstream fs;
+	fs.open("E:\\Server\\token\\"+std::to_string(ID)+".txt",std::ios::app|std::ios::binary|std::ios::out);
+	fs.write((const char*)token,len);
+	fs.flush();
+	fs.close();
+	return 0;
+}
 std::atomic_int SocketNum = 0;//记录当前socket数量
 //处理来自客户端的请求
 void DealClientRequest(SOCKET sockClient,sgx_enclave_id_t eid) {	
@@ -362,15 +370,25 @@ void DealClientRequest(SOCKET sockClient,sgx_enclave_id_t eid) {
 		int ID = 0;
 		SSL_read(ssl,&ID,sizeof(int));
 		std::fstream fs;
-		fs.open("E:\\Server\\"+std::to_string(ID)+".txt",std::ios::in);
+		fs.open("E:\\Server\\"+std::to_string(ID)+".txt",std::ios::binary|std::ios::in);
 		if (!fs) {
-			fs.close();
 			error = -1;
 		}
+		fs.close();
 		SSL_write(ssl, &error, sizeof(int));
 		if (error == -1) break;
 		if (type == 0)
-		{
+		{	
+			uint8_t token[16];
+			uint32_t istoken = 0;
+			SSL_read(ssl,token,sizeof(token));//读取token
+			fs.open("E:\\Server\\token\\" + std::to_string(ID)+".txt",std::ios::in|std::ios::binary);
+			uint8_t Entoken[576];
+			fs.read((char*)Entoken,sizeof(Entoken));
+			fs.flush();
+			fs.close();
+			JudgeToken(eid, &istoken, token, sizeof(token),Entoken,sizeof(Entoken));
+			if (istoken!=0) break;
 			printf("new Client connect");
 			//send(sockClient,(char*)&curvenum,sizeof(int),0);
 			if (ret == SGX_SUCCESS)
@@ -533,62 +551,68 @@ void getProxycon(sgx_enclave_id_t eid)
 		do {
 			int type = 0;
 			SSL_read(ssl,&type,sizeof(int));
+			uint8_t *p2s;
+			uint8_t *outdata;
+			int datasize = 0;
+			sgx_status_t       ret = SGX_SUCCESS;
+			uint32_t id = 0;
+			sgx_ps_cap_t ps_cap;
+			memset(&ps_cap, 0, sizeof(sgx_ps_cap_t));
+			ret = sgx_get_ps_cap(&ps_cap);
 			if (type == 0) //若代理端第一次连接则创建Vcount
 			{
 				if (!Createcounter(eid))
 				{
 					break;
 				}
+				SSL_read(ssl, &datasize, sizeof(int));
+				p2s = (uint8_t*)malloc(FP2SDATA + datasize);
+				SSL_read(ssl, p2s, FP2SDATA + datasize);//获取代理端传来的用户权限表
+				outdata = new uint8_t[20 + datasize + 560];
+				memset(outdata, 0, 20 + datasize + 560);
+				size_t p2slen = FP2SDATA + datasize;
+				size_t outdatalen = datasize + SaveDatasize;
+				DetectacData(eid, &id, type, p2s, p2slen, outdata, outdatalen);
 			}
-			int datasize = 0;
-			SSL_read(ssl, &datasize, sizeof(int));
-			uint8_t *p2s;
-			p2s = (uint8_t*)malloc(datasize + P2SDATA);
-			SSL_read(ssl, p2s, P2SDATA + datasize);//获取代理端传来的用户权限表
-
-			uint8_t *outdata = new uint8_t[20+datasize + 560];
-			memset(outdata,0, 20 + datasize + 560);
-			sgx_status_t       ret = SGX_SUCCESS;
-			uint32_t id = 0;
-			if (ret == SGX_SUCCESS)
+			else if(type==1)
 			{
-				
-				
-				ret = SGX_ERROR_UNEXPECTED;
-				sgx_ps_cap_t ps_cap;
-				memset(&ps_cap, 0, sizeof(sgx_ps_cap_t));
-				ret = sgx_get_ps_cap(&ps_cap);
+				SSL_read(ssl, &datasize, sizeof(int));
+				p2s = (uint8_t*)malloc(P2SDATA + datasize);
+				SSL_read(ssl, p2s, P2SDATA + datasize);//获取代理端传来的用户权限表
+				outdata = new uint8_t[20 + datasize + 560];
+				memset(outdata, 0, 20 + datasize + 560);
 				size_t p2slen = P2SDATA + datasize;
 				size_t outdatalen = datasize + SaveDatasize;
-				DetectacData(eid, &id, p2s,p2slen, outdata,outdatalen );
+				DetectacData(eid, &id,type, p2s, p2slen, outdata, outdatalen);
+			}
+			
 				
-				if (id != -1)
-				{
- 					std::fstream fs;
-					std::string url = "E:\\Server\\" + std::to_string(id) + ".txt";
-					fs.open(url, std::ios::in);
-					if (!fs) {
-						fs.close();
-						fs.open(url, std::ios::app | std::ios::out| std::ios::binary );
-						fs.write((char*)outdata, datasize + SaveDatasize);
-
-					}
-					else {
-						fs.close();
-						fs.open(url, std::ios::trunc|std::ios::out | std::ios::binary);
-						fs.write((char*)outdata, datasize + SaveDatasize);
-
-					}
-					re = -1;
-					re=UpdateCount(eid);
-					fs.flush();
+			if (id != -1)
+			{
+ 				std::fstream fs;
+				std::string url = "E:\\Server\\" + std::to_string(id) + ".txt";
+				fs.open(url, std::ios::in);
+				if (!fs) {
 					fs.close();
+					fs.open(url, std::ios::app | std::ios::out| std::ios::binary );
+					fs.write((char*)outdata, datasize + SaveDatasize);
+
 				}
 				else {
-					re = -1;
+					fs.close();
+					fs.open(url, std::ios::trunc|std::ios::out | std::ios::binary);
+					fs.write((char*)outdata, datasize + SaveDatasize);
+
 				}
+				re = -1;
+				re=UpdateCount(eid);
+				fs.flush();
+				fs.close();
 			}
-			else re = -1;
+			else {
+				re = -1;
+			}
+			
 			
 			
 		} while (0);

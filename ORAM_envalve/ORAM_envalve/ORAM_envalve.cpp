@@ -614,12 +614,23 @@ uint8_t* linkarray(void *a,size_t al,void *b,size_t bl)
 //验证hash并存储权限表到本地
 typedef struct send2server
 {
+	uint32_t tag;
 	uint32_t version;
 	uint32_t datasize;
 	uint32_t ID;
 	uint8_t hash[SGX_SHA256_HASH_SIZE];
 	uint8_t data[];
 }pd;//代理与服务端间数据结构
+typedef struct fsend2server
+{
+	uint32_t tag;
+	uint32_t version;
+	uint32_t datasize;
+	uint32_t ID;
+	uint8_t token[16];
+	uint8_t hash[SGX_SHA256_HASH_SIZE];
+	uint8_t data[];
+}fpd;//代理与服务端间数据结构
 typedef struct replay_protected_pay_load
 {
 	sgx_mc_uuid_t mc;
@@ -712,83 +723,169 @@ int Decryptcount(uint8_t *data)
 	return mc_value;
 	
 }
-uint32_t DetectacData(uint8_t *data, size_t len,uint8_t * Endata,size_t outlen)
+uint32_t Sealdata(uint8_t *data, int plaintextlen, uint8_t *sealdata);
+uint32_t DetectacData(uint32_t type, uint8_t *data, size_t len, uint8_t * Endata, size_t outlen)
 {
 	uint32_t ret = 0;
-	pd *p2data;
-	do {
-		p2data = (pd*)malloc(len);
-		if (p2data==NULL)
-		{
-			printblock("not have enough memory..........");
-			break;
-		}
-		memcpy(p2data,data,len);
-		uint8_t Vcount[580];
-		GetVcount(Vcount,sizeof(Vcount));
-		//对Vcount进行解密
-		int vcount = Decryptcount(Vcount);
-		if (vcount == -1) { return -1; }
-		//int tvcount = vcount + 1;
-		if (vcount == p2data->version) {
-			uint8_t *hashdata;
-			hashdata = linkarray(&p2data->version, sizeof(uint32_t), p2data->data, p2data->datasize);
-			sgx_sha256_hash_t dhash;
-			sgx_sha256_msg(hashdata, sizeof(uint32_t) + (p2data->datasize), &dhash);
-			delete hashdata;
-			printhash(dhash,32);
-			//计算data、id、vcount的hash来传给客户端，保证代理端提交的信息正确接受,考虑要不要这步。
-			/*uint8_t *s2phash;
-			hashdata = linkarray(&p2data->ID,sizeof(uint32_t),p2data->data,p2data->datasize);
-			s2phash = linkarray(hashdata,sizeof(uint32_t)+p2data->datasize,&tvcount,sizeof(int));
-			sgx_sha256_msg(s2phash, sizeof(uint32_t) + (p2data->datasize)+sizeof(int),(sgx_sha256_hash_t*)nhash);
-			delete hashdata;
-			delete s2phash;*/
-
-
-			//将代理端传来的数据加密并绑定一个计数器
-			if (!memcmp(dhash, p2data->hash, SGX_SHA256_HASH_SIZE))
+	if(type==0){
+		fpd *p2data;
+		do {
+			p2data = (fpd*)malloc(len);
+			if (p2data == NULL)
 			{
-				sec *usersecret;
-				usersecret = (sec*)malloc(sizeof(sec) + p2data->datasize);
-				int busy_retry_times = 2;
-				uint32_t size = sgx_calc_sealed_data_size(0, sizeof(sec) + p2data->datasize);
-				do {
-					ret = sgx_create_pse_session();
-				} while (ret == SGX_ERROR_BUSY && busy_retry_times--);
-				if (ret != SGX_SUCCESS) {
-					return -1;
+				printblock("not have enough memory..........");
+				break;
+			}
+			memcpy(p2data, data, len);
+			uint8_t Vcount[580];
+			GetVcount(Vcount, sizeof(Vcount));
+			//对Vcount进行解密
+			int vcount = Decryptcount(Vcount);
+			if (vcount == -1) { return -1; }
+			if (p2data->tag != 0) return -1;
+			//int tvcount = vcount + 1;
+			if (vcount == p2data->version) {
+				uint8_t *hashdata;
+				hashdata = linkarray(&p2data->version, sizeof(uint32_t), p2data->data, p2data->datasize);
+				hashdata = linkarray(hashdata,sizeof(uint32_t)+p2data->datasize,p2data->token,sizeof(p2data->token));
+				sgx_sha256_hash_t dhash;
+				sgx_sha256_msg(hashdata, sizeof(uint32_t) + (p2data->datasize), &dhash);
+				delete hashdata;
+				printhash(dhash, 32);
+				//计算data、id、vcount的hash来传给客户端，保证代理端提交的信息正确接受,考虑要不要这步。
+				/*uint8_t *s2phash;
+				hashdata = linkarray(&p2data->ID,sizeof(uint32_t),p2data->data,p2data->datasize);
+				s2phash = linkarray(hashdata,sizeof(uint32_t)+p2data->datasize,&tvcount,sizeof(int));
+				sgx_sha256_msg(s2phash, sizeof(uint32_t) + (p2data->datasize)+sizeof(int),(sgx_sha256_hash_t*)nhash);
+				delete hashdata;
+				delete s2phash;*/
+
+
+				//将代理端传来的数据加密并绑定一个计数器
+				if (!memcmp(dhash, p2data->hash, SGX_SHA256_HASH_SIZE))
+				{
+					uint8_t Entoken[576];
+					Sealdata(p2data->token,sizeof(p2data->token),Entoken);
+					Keeptokenindisk(&ret,p2data->ID,Entoken, sizeof(Entoken));
+					if (ret != 0) break;
+					sec *usersecret;
+					usersecret = (sec*)malloc(sizeof(sec) + p2data->datasize);
+					int busy_retry_times = 2;
+					uint32_t size = sgx_calc_sealed_data_size(0, sizeof(sec) + p2data->datasize);
+					do {
+						ret = sgx_create_pse_session();
+					} while (ret == SGX_ERROR_BUSY && busy_retry_times--);
+					if (ret != SGX_SUCCESS) {
+						return -1;
+					}
+					ret = sgx_create_monotonic_counter(&usersecret->mc, &usersecret->mc_value);
+					if (ret != SGX_SUCCESS)
+					{
+						return -1;
+					}
+					memcpy(&usersecret->secret, &p2data->data, p2data->datasize);
+					uint32_t datalen = sizeof(sec) + p2data->datasize;
+					uint8_t *tampdata = new uint8_t[datalen];
+					memcpy(tampdata, usersecret, datalen);
+					ret = sgx_seal_data(0, NULL, datalen, tampdata, outlen, (sgx_sealed_data_t*)Endata);
+					//测试
+					//uint8_t ppp[660];
+					//memcpy(ppp,Endata,660);
+					delete[]tampdata;
+					if (ret == SGX_SUCCESS) {
+						ret = p2data->ID;
+					}
+					delete usersecret;
+					free(p2data);
 				}
-				ret = sgx_create_monotonic_counter(&usersecret->mc, &usersecret->mc_value);
-				if (ret != SGX_SUCCESS)
+				else
 				{
 					return -1;
 				}
-				memcpy(&usersecret->secret, &p2data->data, p2data->datasize);
-				uint32_t datalen = sizeof(sec) + p2data->datasize;
-				uint8_t *tampdata=new uint8_t[datalen];
-				memcpy(tampdata,usersecret,datalen);
-				ret = sgx_seal_data(0, NULL, datalen, tampdata,outlen, (sgx_sealed_data_t*)Endata);
-				//测试
-				//uint8_t ppp[660];
-				//memcpy(ppp,Endata,660);
-				delete[]tampdata;
-				if (ret == SGX_SUCCESS) {
-					ret=p2data->ID;
-				}
-				delete usersecret;
-				free(p2data);
 			}
 			else
 			{
 				return -1;
 			}
-		}
-		else
-		{
-			return -1;
-		}
-	} while (0);
+		} while (0);
+	}
+	else if(type==1){
+		pd *p2data;
+		do {
+			p2data = (pd*)malloc(len);
+			if (p2data == NULL)
+			{
+				printblock("not have enough memory..........");
+				break;
+			}
+			memcpy(p2data, data, len);
+			uint8_t Vcount[580];
+			GetVcount(Vcount, sizeof(Vcount));
+			//对Vcount进行解密
+			int vcount = Decryptcount(Vcount);
+			if (vcount == -1) { return -1; }
+			if (p2data->tag != 1) return -1;
+			//int tvcount = vcount + 1;
+			if (vcount == p2data->version) {
+				uint8_t *hashdata;
+				hashdata = linkarray(&p2data->version, sizeof(uint32_t), p2data->data, p2data->datasize);
+				sgx_sha256_hash_t dhash;
+				sgx_sha256_msg(hashdata, sizeof(uint32_t) + (p2data->datasize), &dhash);
+				delete hashdata;
+				printhash(dhash, 32);
+				//计算data、id、vcount的hash来传给客户端，保证代理端提交的信息正确接受,考虑要不要这步。
+				/*uint8_t *s2phash;
+				hashdata = linkarray(&p2data->ID,sizeof(uint32_t),p2data->data,p2data->datasize);
+				s2phash = linkarray(hashdata,sizeof(uint32_t)+p2data->datasize,&tvcount,sizeof(int));
+				sgx_sha256_msg(s2phash, sizeof(uint32_t) + (p2data->datasize)+sizeof(int),(sgx_sha256_hash_t*)nhash);
+				delete hashdata;
+				delete s2phash;*/
+
+
+				//将代理端传来的数据加密并绑定一个计数器
+				if (!memcmp(dhash, p2data->hash, SGX_SHA256_HASH_SIZE))
+				{
+					sec *usersecret;
+					usersecret = (sec*)malloc(sizeof(sec) + p2data->datasize);
+					int busy_retry_times = 2;
+					uint32_t size = sgx_calc_sealed_data_size(0, sizeof(sec) + p2data->datasize);
+					do {
+						ret = sgx_create_pse_session();
+					} while (ret == SGX_ERROR_BUSY && busy_retry_times--);
+					if (ret != SGX_SUCCESS) {
+						return -1;
+					}
+					ret = sgx_create_monotonic_counter(&usersecret->mc, &usersecret->mc_value);
+					if (ret != SGX_SUCCESS)
+					{
+						return -1;
+					}
+					memcpy(&usersecret->secret, &p2data->data, p2data->datasize);
+					uint32_t datalen = sizeof(sec) + p2data->datasize;
+					uint8_t *tampdata = new uint8_t[datalen];
+					memcpy(tampdata, usersecret, datalen);
+					ret = sgx_seal_data(0, NULL, datalen, tampdata, outlen, (sgx_sealed_data_t*)Endata);
+					//测试
+					//uint8_t ppp[660];
+					//memcpy(ppp,Endata,660);
+					delete[]tampdata;
+					if (ret == SGX_SUCCESS) {
+						ret = p2data->ID;
+					}
+					delete usersecret;
+					free(p2data);
+				}
+				else
+				{
+					return -1;
+				}
+			}
+			else
+			{
+				return -1;
+			}
+		} while (0);
+	}
 	sgx_close_pse_session();
 	return ret;
 }
@@ -845,10 +942,10 @@ uint32_t AES_Decryptcbc(uint8_t* key, size_t len, uint8_t *Entext, uint8_t *plai
 //	sgx_ecc256_close_context(ec);
 //	return re;
 //}
-uint32_t Sealdata(uint8_t *data,int len,uint8_t *sealdata) {
+uint32_t Sealdata(uint8_t *data,int plaintextlen,uint8_t *sealdata) {
 	uint32_t ret = 0;
-	uint32_t size = sgx_calc_sealed_data_size(0, len);
-	ret = sgx_seal_data(0, NULL, len, data,
+	uint32_t size = sgx_calc_sealed_data_size(0, plaintextlen);
+	ret = sgx_seal_data(0, NULL, plaintextlen, data,
 		size, (sgx_sealed_data_t*)sealdata);
 	return ret;
 }
@@ -978,6 +1075,20 @@ int ComputeSharekey(uint8_t *px, uint8_t *py, size_t len) {
 	delete[](Ipp8u*)regPublic;
 	delete[](Ipp8u*)regPrivate;
 	delete[](Ipp8u*)pECP;
+	return re;
+}
+//判断token是否正确
+uint32_t JudgeToken(uint8_t *token, size_t len, uint8_t *Entoken, size_t Elen) {
+	uint32_t re = 0;
+	uint8_t unsealdata[16];
+	UnSealdata(Entoken,unsealdata,(uint32_t*)len);
+	if (memcmp(token, unsealdata, len)==0) {
+		re=0;
+	}
+	else
+	{
+		re=-1;
+	}
 	return re;
 }
 //int ComputeSharekey(uint8_t *px, uint8_t *py, uint8_t *prk,size_t len) {

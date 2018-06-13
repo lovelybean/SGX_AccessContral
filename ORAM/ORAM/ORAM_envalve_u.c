@@ -58,11 +58,20 @@ typedef struct ms_updatecount_t {
 
 typedef struct ms_DetectacData_t {
 	uint32_t ms_retval;
+	uint32_t ms_type;
 	uint8_t* ms_data;
 	size_t ms_len;
 	uint8_t* ms_Endata;
 	size_t ms_outlen;
 } ms_DetectacData_t;
+
+typedef struct ms_JudgeToken_t {
+	uint32_t ms_retval;
+	uint8_t* ms_token;
+	size_t ms_len;
+	uint8_t* ms_Entoken;
+	size_t ms_Elen;
+} ms_JudgeToken_t;
 
 typedef struct ms_GetServerpublickey_t {
 	int ms_retval;
@@ -165,6 +174,13 @@ typedef struct ms_Getuserdatafromdisk_t {
 	uint8_t* ms_userdata;
 	size_t ms_len;
 } ms_Getuserdatafromdisk_t;
+
+typedef struct ms_Keeptokenindisk_t {
+	uint32_t ms_retval;
+	uint32_t ms_ID;
+	uint8_t* ms_token;
+	size_t ms_len;
+} ms_Keeptokenindisk_t;
 
 typedef struct ms_UpdateshujutoServerdisk_t {
 	int ms_retval;
@@ -349,6 +365,14 @@ static sgx_status_t SGX_CDECL ORAM_envalve_Getuserdatafromdisk(void* pms)
 	return SGX_SUCCESS;
 }
 
+static sgx_status_t SGX_CDECL ORAM_envalve_Keeptokenindisk(void* pms)
+{
+	ms_Keeptokenindisk_t* ms = SGX_CAST(ms_Keeptokenindisk_t*, pms);
+	ms->ms_retval = Keeptokenindisk(ms->ms_ID, ms->ms_token, ms->ms_len);
+
+	return SGX_SUCCESS;
+}
+
 static sgx_status_t SGX_CDECL ORAM_envalve_UpdateshujutoServerdisk(void* pms)
 {
 	ms_UpdateshujutoServerdisk_t* ms = SGX_CAST(ms_UpdateshujutoServerdisk_t*, pms);
@@ -463,9 +487,9 @@ static sgx_status_t SGX_CDECL ORAM_envalve_sgx_thread_set_multiple_untrusted_eve
 
 static const struct {
 	size_t nr_ocall;
-	void * func_addr[25];
+	void * func_addr[26];
 } ocall_table_ORAM_envalve = {
-	25,
+	26,
 	{
 		(void*)(uintptr_t)ORAM_envalve_printblock,
 		(void*)(uintptr_t)ORAM_envalve_printint,
@@ -478,6 +502,7 @@ static const struct {
 		(void*)(uintptr_t)ORAM_envalve_GetVcount,
 		(void*)(uintptr_t)ORAM_envalve_Getdatalen,
 		(void*)(uintptr_t)ORAM_envalve_Getuserdatafromdisk,
+		(void*)(uintptr_t)ORAM_envalve_Keeptokenindisk,
 		(void*)(uintptr_t)ORAM_envalve_UpdateshujutoServerdisk,
 		(void*)(uintptr_t)ORAM_envalve_session_request_lo,
 		(void*)(uintptr_t)ORAM_envalve_exchange_report_lo,
@@ -608,15 +633,29 @@ sgx_status_t updatecount(sgx_enclave_id_t eid, uint32_t* retval, uint8_t* data, 
 	return status;
 }
 
-sgx_status_t DetectacData(sgx_enclave_id_t eid, uint32_t* retval, uint8_t* data, size_t len, uint8_t* Endata, size_t outlen)
+sgx_status_t DetectacData(sgx_enclave_id_t eid, uint32_t* retval, uint32_t type, uint8_t* data, size_t len, uint8_t* Endata, size_t outlen)
 {
 	sgx_status_t status;
 	ms_DetectacData_t ms;
+	ms.ms_type = type;
 	ms.ms_data = data;
 	ms.ms_len = len;
 	ms.ms_Endata = Endata;
 	ms.ms_outlen = outlen;
 	status = sgx_ecall(eid, 11, &ocall_table_ORAM_envalve, &ms);
+	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
+	return status;
+}
+
+sgx_status_t JudgeToken(sgx_enclave_id_t eid, uint32_t* retval, uint8_t* token, size_t len, uint8_t* Entoken, size_t Elen)
+{
+	sgx_status_t status;
+	ms_JudgeToken_t ms;
+	ms.ms_token = token;
+	ms.ms_len = len;
+	ms.ms_Entoken = Entoken;
+	ms.ms_Elen = Elen;
+	status = sgx_ecall(eid, 12, &ocall_table_ORAM_envalve, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
 }
@@ -628,7 +667,7 @@ sgx_status_t GetServerpublickey(sgx_enclave_id_t eid, int* retval, uint8_t* px, 
 	ms.ms_px = px;
 	ms.ms_py = py;
 	ms.ms_len = len;
-	status = sgx_ecall(eid, 12, &ocall_table_ORAM_envalve, &ms);
+	status = sgx_ecall(eid, 13, &ocall_table_ORAM_envalve, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
 }
@@ -640,7 +679,7 @@ sgx_status_t ComputeSharekey(sgx_enclave_id_t eid, int* retval, uint8_t* px, uin
 	ms.ms_px = px;
 	ms.ms_py = py;
 	ms.ms_len = len;
-	status = sgx_ecall(eid, 13, &ocall_table_ORAM_envalve, &ms);
+	status = sgx_ecall(eid, 14, &ocall_table_ORAM_envalve, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
 }
@@ -651,7 +690,7 @@ sgx_status_t gettestdata(sgx_enclave_id_t eid, int* retval, uint8_t* data, size_
 	ms_gettestdata_t ms;
 	ms.ms_data = data;
 	ms.ms_len = len;
-	status = sgx_ecall(eid, 14, &ocall_table_ORAM_envalve, &ms);
+	status = sgx_ecall(eid, 15, &ocall_table_ORAM_envalve, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
 }
@@ -662,7 +701,7 @@ sgx_status_t Insertskey(sgx_enclave_id_t eid, int* retval, uint8_t* sealkey, siz
 	ms_Insertskey_t ms;
 	ms.ms_sealkey = sealkey;
 	ms.ms_len = len;
-	status = sgx_ecall(eid, 15, &ocall_table_ORAM_envalve, &ms);
+	status = sgx_ecall(eid, 16, &ocall_table_ORAM_envalve, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
 }
@@ -675,7 +714,7 @@ sgx_status_t AnalysisRequest(sgx_enclave_id_t eid, uint32_t* retval, uint8_t* re
 	ms.ms_len = len;
 	ms.ms_Response = Response;
 	ms.ms_Reslen = Reslen;
-	status = sgx_ecall(eid, 16, &ocall_table_ORAM_envalve, &ms);
+	status = sgx_ecall(eid, 17, &ocall_table_ORAM_envalve, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
 }
@@ -686,7 +725,7 @@ sgx_status_t Buildsecurepath(sgx_enclave_id_t eid, uint32_t* retval, sgx_enclave
 	ms_Buildsecurepath_t ms;
 	ms.ms_src_enclave_id = src_enclave_id;
 	ms.ms_dest_enclave_id = dest_enclave_id;
-	status = sgx_ecall(eid, 17, &ocall_table_ORAM_envalve, &ms);
+	status = sgx_ecall(eid, 18, &ocall_table_ORAM_envalve, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
 }

@@ -14,6 +14,7 @@
 #include <openssl\sha.h>
 #define ECDH_SIZE 33
 #define MSG_LEN 16
+#define RANDNUMLEN 16
 #pragma comment(lib,"ws2_32.lib")
 
 #define CA_FILE                "C:/CA/cacert.pem"
@@ -201,13 +202,23 @@ void ShowCerts(SSL * ssl)
 //定义发送至服务端的数据结构
 typedef struct send2server
 {
+	uint32_t tag;
 	uint32_t version;
 	uint32_t datasize;
 	uint32_t ID;
 	uint8_t hash[SHA256_DIGEST_LENGTH];
 	uint8_t data[];
 }p2s;
-
+typedef struct firestsend2server
+{
+	uint32_t tag;
+	uint32_t version;
+	uint32_t datasize;
+	uint32_t ID;
+	uint8_t token[RANDNUMLEN];
+	uint8_t hash[SHA256_DIGEST_LENGTH];
+	uint8_t data[];
+}fp2s;
 
 
 std::atomic<int> Version;//版本锁
@@ -215,7 +226,7 @@ std::atomic<int> Version;//版本锁
 
 
 //将更新后的权限表发回服务器
-int Sendaccesstable(int id,int version, char *table, std::streamoff size)
+int Sendaccesstable(int id,int version, char *table, std::streamoff size,uint8_t* token=NULL)
 {
 	int re=0;
 	SSL_CTX *ctx;
@@ -263,45 +274,89 @@ int Sendaccesstable(int id,int version, char *table, std::streamoff size)
 		ShowCerts(ssl);
 	}
 	do {
-		int type = 0;
-		p2s *tamp;
-		tamp = (p2s*)malloc(size + sizeof(p2s));
-		if (tamp == NULL)
-		{
-			printf("the memory not enough");
-			break;
+		if (token != NULL) {
+			int type = 0;
+			fp2s *tamp;
+			tamp = (fp2s*)malloc(size + sizeof(fp2s));
+			if (tamp == NULL)
+			{
+				printf("the memory not enough");
+				break;
+			}
+			tamp->tag = type;
+			memcpy(tamp->token,token,RANDNUMLEN);
+			uint8_t *vdhash;
+			vdhash = (uint8_t*)malloc(sizeof(int) + size+RANDNUMLEN);
+			if (vdhash == NULL)
+			{
+				printf("the memory not enough");
+				break;
+			}
+			memcpy_s(vdhash, sizeof(int), &version, sizeof(int));
+			memcpy_s(vdhash + sizeof(int), size, table, size);
+			memcpy_s(vdhash + sizeof(int)+size,RANDNUMLEN,token,RANDNUMLEN);
+			unsigned char temhash[33];
+			//计算version与data的hash值
+			SHA256((const unsigned char*)vdhash, sizeof(int) + size+RANDNUMLEN, temhash);
+			memcpy(tamp->hash, temhash, 32);
+
+			printhash(tamp->hash);
+
+			free(vdhash);
+			tamp->datasize = size;
+			tamp->ID = id;
+			tamp->version = version;
+			memcpy_s(tamp->data, size, table, size);
+
+			//int requestsize = sizeof(fp2s) + size;
+			//发送数据到服务端
+			SSL_write(ssl, &type, sizeof(int));
+			SSL_write(ssl, &tamp->datasize, sizeof(int));
+			SSL_write(ssl, (char*)tamp, size + sizeof(fp2s));
+			//接收服务端的响应消息
+			SSL_read(ssl, &re, sizeof(int));
 		}
-		uint8_t *vdhash;
-		vdhash = (uint8_t*)malloc(sizeof(int) + size);
-		if (vdhash == NULL)
+		else
 		{
-			printf("the memory not enough");
-			break;
+			int type = 1;
+			p2s *tamp;
+			tamp = (p2s*)malloc(size + sizeof(p2s));
+			if (tamp == NULL)
+			{
+				printf("the memory not enough");
+				break;
+			}
+			tamp->tag = type;
+			uint8_t *vdhash;
+			vdhash = (uint8_t*)malloc(sizeof(int) + size);
+			if (vdhash == NULL)
+			{
+				printf("the memory not enough");
+				break;
+			}
+			memcpy_s(vdhash, sizeof(int), &version, sizeof(int));
+			memcpy_s(vdhash + sizeof(int), size, table, size);
+			unsigned char temhash[33];
+			//计算version与data的hash值
+			SHA256((const unsigned char*)vdhash, sizeof(int) + size, temhash);
+			memcpy(tamp->hash, temhash, 32);
+
+			printhash(tamp->hash);
+
+			free(vdhash);
+			tamp->datasize = size;
+			tamp->ID = id;
+			tamp->version = version;
+			memcpy_s(tamp->data, size, table, size);
+
+
+			//发送数据到服务端
+			SSL_write(ssl, &type, sizeof(int));
+			SSL_write(ssl, &tamp->datasize, sizeof(int));
+			SSL_write(ssl, (char*)tamp, size + sizeof(p2s));
+			//接收服务端的响应消息
+			SSL_read(ssl, &re, sizeof(int));
 		}
-		memcpy_s(vdhash, sizeof(int), &version, sizeof(int));
-		memcpy_s(vdhash + sizeof(int), size, table, size);
-		unsigned char temhash[33];
-		//计算version与data的hash值
-		SHA256((const unsigned char*)vdhash, sizeof(int) + size, temhash);
-		memcpy(tamp->hash,temhash,32);
-
-		printhash(tamp->hash);
-
-		free(vdhash);
-		tamp->datasize = size;
-		tamp->ID = id;
-		tamp->version = version;
-		memcpy_s(tamp->data, size, table, size);
-
-
-		//发送数据到服务端
-		SSL_write(ssl, &type,sizeof(int));
-		SSL_write(ssl,&tamp->datasize,sizeof(int));
-		SSL_write(ssl, (char*)tamp, size + sizeof(p2s));
-		
-		//接收服务端的响应消息
-		SSL_read(ssl, &re, sizeof(int));
-
 		if (re!=1)
 		{
 			printf("\n更新权限表失败\n");
@@ -347,7 +402,21 @@ char* SerializeMap(std::map<int,int> *tem,int mapsize)
 	}
 	return Mchar;
 }
-
+//产生一个随机大数
+int getrandnum(uint8_t* Token, int len)
+{
+	int re = 0;
+	BIGNUM *token;
+	token=BN_new();
+	BN_rand(token,len*8,-1,0);
+	unsigned char *Ttoken=new unsigned char[len];
+	re=BN_bn2bin(token,Ttoken);
+	BN_clear_free(token);
+	memcpy(Token,Ttoken,len);
+	memset(Ttoken,0,len);
+	delete[] Ttoken;
+	return re;
+}
 std::atomic<int> id ;//id锁
 
 std::mutex m;//声明互斥锁
@@ -367,58 +436,69 @@ void useractive(SOCKET sockClient, SSL_CTX *ctx) {
 	int Ucount = 0;//用户与代理间同步记号
 	SSL_read(ssl, (char*)&tamp_d, sizeof(user_data));
 	//此处可更改为只传送要修改的内容,让服务端去修改。我这里目前是在proxy端修改完然后全部传送。
-	m.lock();//对下面代码段加锁
+	m.lock();//加锁获取当前用户ID
+	int tampID = id;
+	m.unlock();
 	if (tamp_d.type == 1)
 	{
-		std::ifstream in;
-		char buf[1224];
-		in.open("C://Server//cert.pem", std::ios::in | std::ios::binary);
-		memset(buf, 0, 1224);
-		in.read(buf, 1224);
-		in.close();
-		std::ofstream out;
-		printf("\n来自用户：%d的连接\n", id);
-		tamp_d.ID = id;
-		std::string url = "E:\\Proxy\\" + std::to_string(id) + ".txt";
-		out.open(url, std::ios::app | std::ios::binary);
-		std::map<int, int> *useracmap = new std::map<int, int>;
-		for (int i = 0; i < txtlen; i++)
-		{
-			useracmap->insert(std::pair<int, int>(i, rand() % 3));
-			printf("\n%d用户权限：%d",id,useracmap->find(i)->second);
-		}
-		char *senddata = SerializeMap(useracmap, useracmap->size());
-		
-		int tem = Sendaccesstable(tamp_d.ID,Version, senddata, 8*(useracmap->size()));//发送数据到服务端
-		if (tem == 1) {
-			Ucount++;
-			out.write((char*)&Ucount, sizeof(int));
-			out.write(senddata, 8 * (useracmap->size()));
-			SSL_write(ssl, &tem, sizeof(int));
-			SSL_write(ssl, (char*)&id, sizeof(int));//返回客户端ID
-			SSL_write(ssl, buf, sizeof(buf));//返回服务器证书
-			out.flush();
-			out.close();
-			delete useracmap;
-			id+=1;
-			Version += 1;//计数器加1
-			//写入ID
-			std::fstream fs;
-			fs.open("E:\\Proxy\\ID.txt", std::ios::trunc | std::ios::out);
-			fs.write((char*)&id, sizeof(int));
-			fs.flush();
-			fs.close();
-			//写入Version
-			fs.open("E:\\Proxy\\Version.txt", std::ios::trunc | std::ios::out);
-			fs.write((char*)&Version, sizeof(int));
-			fs.flush();
-			fs.close();
-			
-		}
-		else
-		{
-			SSL_write(ssl, &tem, sizeof(int));
-		}
+		do{
+			std::ifstream in;
+			char buf[1224];
+			in.open("C://Server//cert.pem", std::ios::in | std::ios::binary);
+			memset(buf, 0, 1224);
+			in.read(buf, 1224);
+			in.close();
+			std::ofstream out;
+			printf("\n来自用户：%d的连接\n", tampID);
+			tamp_d.ID = tampID;
+			std::string url = "E:\\Proxy\\" + std::to_string(tampID) + ".txt";
+			out.open(url, std::ios::app | std::ios::binary);
+			std::map<int, int> *useracmap = new std::map<int, int>;
+			for (int i = 0; i < txtlen; i++)
+			{
+				useracmap->insert(std::pair<int, int>(i, rand() % 3));
+				printf("\n%d用户权限：%d", tampID, useracmap->find(i)->second);
+			}
+			char *senddata = SerializeMap(useracmap, useracmap->size());
+			//为当前产生一个token令牌
+			uint8_t *token = new uint8_t[RANDNUMLEN];
+			if (getrandnum(token, RANDNUMLEN) <= 0)
+			{
+				delete[] useracmap;
+				break;
+			}
+			int tem = Sendaccesstable(tamp_d.ID, Version, senddata, 8 * (useracmap->size()),token);//发送数据到服务端
+			if (tem == 1) {
+				Ucount++;
+				out.write((char*)&Ucount, sizeof(int));
+				out.write(senddata, 8 * (useracmap->size()));
+				SSL_write(ssl, &tem, sizeof(int));
+				SSL_write(ssl, (char*)&tampID, sizeof(int));//返回客户端ID
+				SSL_write(ssl, (char*)&token, RANDNUMLEN);//客户端去和服务器建立连接的token
+				SSL_write(ssl, buf, sizeof(buf));//返回服务器证书
+				out.flush();
+				out.close();
+				delete[] useracmap;
+				tampID += 1;
+				Version += 1;//计数器加1
+				//写入ID
+				std::fstream fs;
+				fs.open("E:\\Proxy\\ID.txt", std::ios::trunc | std::ios::out);
+				fs.write((char*)&tampID, sizeof(int));
+				fs.flush();
+				fs.close();
+				//写入Version
+				fs.open("E:\\Proxy\\Version.txt", std::ios::trunc | std::ios::out);
+				fs.write((char*)&Version, sizeof(int));
+				fs.flush();
+				fs.close();
+
+			}
+			else
+			{
+				SSL_write(ssl, &tem, sizeof(int));
+			}
+		}while (0);
 	}
 	else if (tamp_d.type == 2)
 	{
@@ -467,7 +547,6 @@ void useractive(SOCKET sockClient, SSL_CTX *ctx) {
 		}
 		else SSL_write(ssl, &tem, sizeof(int));	
 	}
-	m.unlock();
 }
 void StartProxy()
 {

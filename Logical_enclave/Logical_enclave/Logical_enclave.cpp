@@ -12,6 +12,7 @@
 sgx_key_128bit_t dh_aek;   // Session key
 sgx_dh_session_t sgx_dh_session;
 
+
 //uerfile数据结构
 typedef struct userfile {
 	sgx_mc_uuid_t mc;

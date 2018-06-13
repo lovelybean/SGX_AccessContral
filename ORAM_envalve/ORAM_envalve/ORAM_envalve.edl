@@ -20,7 +20,9 @@ enclave {
 		public uint32_t createcount([out,size=len]uint8_t *data,size_t len);
 		public uint32_t updatecount([in,out,size=len]uint8_t *data, size_t len);
 
-		public uint32_t DetectacData([in,size=len]uint8_t* data,size_t len,[out,size=outlen]uint8_t* Endata,size_t outlen);
+		public uint32_t DetectacData(uint32_t type,[in,size=len]uint8_t* data,size_t len,[out,size=outlen]uint8_t* Endata,size_t outlen);
+		public uint32_t JudgeToken([in,size=len]uint8_t *token, size_t len,[in,size=Elen]uint8_t *Entoken,size_t Elen);//判断token是否正确
+
 		public int GetServerpublickey([out,size=len]uint8_t *px,[out,size=len]uint8_t *py,size_t len);
 		public int ComputeSharekey([in,size=len]uint8_t *px, [in,size=len]uint8_t *py,size_t len);
 		public int gettestdata([out,size=len]uint8_t *data,size_t len);
@@ -44,6 +46,8 @@ enclave {
 		//void WriteVcount([in,size=len]uint8_t* data,size_t len);
 		size_t Getdatalen(int ID);
 		void Getuserdatafromdisk(int ID,[out,size=len]uint8_t *userdata,size_t len);
+		uint32_t Keeptokenindisk(uint32_t ID,[in,size=len]uint8_t *token,size_t len);//store token in disk
+
 		//int Encryptusershuju(int dataid,[out,size=len]uint8_t* usershuju, size_t len);
 		int UpdateshujutoServerdisk(int ID,[in,size=len]uint8_t* data,size_t len);
 		//在两个enclave间建立可信通道

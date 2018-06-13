@@ -238,6 +238,12 @@ uint8_t* GetDatafromServer(int ID,int dataid,int ac) {
 				realdata = (uint8_t*)"\ndon't join in system!!!!\n";
 				break; 
 			}
+			fs.open("E:\\Client\\Token\\"+std::to_string(ID)+".txt",std::ios::in|std::ios::binary);
+			uint8_t token[16];
+			fs.read((char*)token,sizeof(token));
+			fs.flush();
+			fs.close();
+			SSL_write(ssl,token,sizeof(token));
 			unsigned char* sx = new unsigned char[Serverpubkeylen];
 			unsigned char* sy = new unsigned char[Serverpubkeylen];
 			EC_KEY *ecdh = genECDHpubkey(sx, sy);
@@ -399,6 +405,10 @@ void GetScertfromProxy(int way)
 		Pcount++;
 		int id = 0;
 		BIO_read(bio, &id, sizeof(int));
+		//与Server端协商秘钥时使用
+		uint8_t token[16];
+		BIO_read(bio,token,sizeof(token));
+
 		char Scert[1224];
 		BIO_read(bio, Scert, sizeof(Scert));
 		std::ofstream out;
@@ -406,6 +416,11 @@ void GetScertfromProxy(int way)
 		out.open(url, std::ios::app | std::ios::binary);
 		out.write((char*)&Pcount,sizeof(int));
 		//out.write((char*)&id, sizeof(int));
+		out.flush();
+		out.close();
+		//将token写入本地
+		out.open("E:\\Client\\Token\\" + std::to_string(id) + ".txt",std::ios::app|std::ios::out|std::ios::binary);
+		out.write((char*)token,sizeof(token));
 		out.flush();
 		out.close();
 		out.open("E:\\Client\\cert.pem",std::ios::app| std::ios::trunc|std::ios::binary);

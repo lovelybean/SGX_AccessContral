@@ -28,6 +28,7 @@ void SGX_UBRIDGE(SGX_NOCONVENTION, Transferacbucket, (int len, int index, int ta
 void SGX_UBRIDGE(SGX_NOCONVENTION, GetVcount, (uint8_t* data, size_t len));
 size_t SGX_UBRIDGE(SGX_NOCONVENTION, Getdatalen, (int ID));
 void SGX_UBRIDGE(SGX_NOCONVENTION, Getuserdatafromdisk, (int ID, uint8_t* userdata, size_t len));
+uint32_t SGX_UBRIDGE(SGX_NOCONVENTION, Keeptokenindisk, (uint32_t ID, uint8_t* token, size_t len));
 int SGX_UBRIDGE(SGX_NOCONVENTION, UpdateshujutoServerdisk, (int ID, uint8_t* data, size_t len));
 uint32_t SGX_UBRIDGE(SGX_NOCONVENTION, session_request_lo, (sgx_enclave_id_t src_enclave_id, sgx_enclave_id_t dest_enclave_id, sgx_dh_msg1_t* dh_msg1, uint32_t* session_id));
 uint32_t SGX_UBRIDGE(SGX_NOCONVENTION, exchange_report_lo, (sgx_enclave_id_t src_enclave_id, sgx_enclave_id_t dest_enclave_id, sgx_dh_msg2_t* dh_msg2, sgx_dh_msg3_t* dh_msg3, uint32_t session_id));
@@ -54,7 +55,8 @@ sgx_status_t getacPosMap(sgx_enclave_id_t eid, int index, int tag, int type);
 sgx_status_t returnuserdata(sgx_enclave_id_t eid, int index, int sign);
 sgx_status_t createcount(sgx_enclave_id_t eid, uint32_t* retval, uint8_t* data, size_t len);
 sgx_status_t updatecount(sgx_enclave_id_t eid, uint32_t* retval, uint8_t* data, size_t len);
-sgx_status_t DetectacData(sgx_enclave_id_t eid, uint32_t* retval, uint8_t* data, size_t len, uint8_t* Endata, size_t outlen);
+sgx_status_t DetectacData(sgx_enclave_id_t eid, uint32_t* retval, uint32_t type, uint8_t* data, size_t len, uint8_t* Endata, size_t outlen);
+sgx_status_t JudgeToken(sgx_enclave_id_t eid, uint32_t* retval, uint8_t* token, size_t len, uint8_t* Entoken, size_t Elen);
 sgx_status_t GetServerpublickey(sgx_enclave_id_t eid, int* retval, uint8_t* px, uint8_t* py, size_t len);
 sgx_status_t ComputeSharekey(sgx_enclave_id_t eid, int* retval, uint8_t* px, uint8_t* py, size_t len);
 sgx_status_t gettestdata(sgx_enclave_id_t eid, int* retval, uint8_t* data, size_t len);
