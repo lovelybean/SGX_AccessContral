@@ -28,28 +28,26 @@ ORAM_envalve.cpp(638): warning C4200: 使用了非标准扩展: 结构/联合中
   ORAM_envalve.cpp(638): note: 默认构造函数或 copy/move 赋值运算符将忽略此成员
 ORAM_envalve.cpp(689): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
 ORAM_envalve.cpp(703): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
-ORAM_envalve.cpp(790): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
-ORAM_envalve.cpp(867): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
-ORAM_envalve.cpp(900): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-ORAM_envalve.cpp(905): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-ORAM_envalve.cpp(906): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-ORAM_envalve.cpp(918): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-ORAM_envalve.cpp(923): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-ORAM_envalve.cpp(924): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-ORAM_envalve.cpp(1183): warning C4091: “typedef ”: 没有声明变量时忽略“Tofileenclave”的左侧
-ORAM_envalve.cpp(1188): warning C4091: “typedef ”: 没有声明变量时忽略“UserRequest”的左侧
-ORAM_envalve.cpp(1209): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
-ORAM_envalve.cpp(1228): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
-ORAM_envalve.cpp(1247): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
-ORAM_envalve.cpp(1295): warning C4267: “初始化”: 从“size_t”转换到“uint32_t”，可能丢失数据
+ORAM_envalve.cpp(792): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
+ORAM_envalve.cpp(869): warning C4267: “参数”: 从“size_t”转换到“const uint32_t”，可能丢失数据
+ORAM_envalve.cpp(902): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(907): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(908): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(920): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(925): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(926): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(1185): warning C4091: “typedef ”: 没有声明变量时忽略“Tofileenclave”的左侧
+ORAM_envalve.cpp(1190): warning C4091: “typedef ”: 没有声明变量时忽略“UserRequest”的左侧
+ORAM_envalve.cpp(1211): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(1230): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(1249): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+ORAM_envalve.cpp(1297): warning C4267: “初始化”: 从“size_t”转换到“uint32_t”，可能丢失数据
   正在生成代码...
 e:\oram_envalve\oram_envalve\oram_envalve.cpp(600): warning C4715: “Buildsecurepath”: 不是所有的控件路径都返回值
   ORAM_envalve_t.c
     正在创建库 E:\ORAM\x64\Simulation\ORAM_envalve.lib 和对象 E:\ORAM\x64\Simulation\ORAM_envalve.exp
   ORAM_envalve.vcxproj -> E:\ORAM\x64\Simulation\ORAM_envalve.dll
   ORAM_envalve.vcxproj -> E:\ORAM\x64\Simulation\ORAM_envalve.pdb (Full PDB)
-  The required memory is 0x4d4000.
-  Succeed.
   <EnclaveConfiguration>
       <ProdID>0</ProdID>
       <ISVSVN>0</ISVSVN>
@@ -61,3 +59,5 @@ e:\oram_envalve\oram_envalve\oram_envalve.cpp(600): warning C4715: “Buildsecur
       <MiscSelect>0</MiscSelect>
       <MiscMask>0xFFFFFFFF</MiscMask>
   </EnclaveConfiguration>
+  The required memory is 0x4d4000.
+  Succeed.

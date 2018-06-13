@@ -35,10 +35,10 @@
 sgx_enclave_id_t   Feid;
 sgx_enclave_id_t   Leid;
 //睡眠函数
-void gosleep() 
-{
-	Sleep(60000);
-}
+//void gosleep() 
+//{
+//	Sleep(60000);
+//}
 //初始化文件
 int Initfile() {
 	std::fstream fs;
@@ -438,6 +438,15 @@ void DealClientRequest(SOCKET sockClient,sgx_enclave_id_t eid) {
 			
 			SSL_write(ssl, &result, sizeof(int));
 			SSL_write(ssl,Enuserdata,sizeof(Enuserdata));
+			int writetag = 0;
+			SSL_read(ssl,&writetag,sizeof(int));
+			if (writetag == 1) {
+				int tdataid = 0;
+				SSL_read(ssl,&tdataid,sizeof(int));
+				//为该dataid解锁
+				Deblocking(Feid,(uint32_t*)&writetag,tdataid);
+				while(writetag!=0) Deblocking(Feid, (uint32_t*)&writetag, tdataid);
+			}
 		}
 		else
 		{

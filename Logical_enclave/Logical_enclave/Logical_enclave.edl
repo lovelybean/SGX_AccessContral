@@ -11,6 +11,7 @@ enclave {
 		 //public uint32_t FindfileTOuser([in,size=len]uint8_t* data,size_t len,[out,size=len2]uint8_t *Enuserdata,size_t len2);
 		 public uint32_t Encryptuserfile([in,size=len]uint8_t* file,size_t len,[out,size=outlen]uint8_t *Entemfile,size_t outlen);
 		 public uint32_t GetdatatoClient(int ID,[in,size=len]uint8_t* data,size_t len,[out,size=Enlen]uint8_t* Enuserdata,size_t Enlen);
+		 public uint32_t Deblocking(int tdataid);
 		 public uint32_t WritebackdatatoDisk();
     };
 
@@ -18,7 +19,7 @@ enclave {
         /* define OCALLs here. */
 		int Encryptusershuju(int dataid,[out,size=len]uint8_t* usershuju, size_t len);
 		void disp([in,size=len]uint8_t *pbuf,size_t len);
-		void gosleep();
+		//void gosleep();//模拟写用户
 		int Updatefileindisk(int dataid,[in,size=len]uint8_t *file,size_t len);
 		//转发请求到Logical_enclave
 		uint32_t TransferRequestToL([in,size=len]uint8_t *request,size_t len,[out,size=Reslen]uint8_t *Response,size_t Reslen);

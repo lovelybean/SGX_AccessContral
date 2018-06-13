@@ -112,6 +112,16 @@ typedef struct UserRequest {
 	uint32_t len;
 	uint8_t data[16];
 };
+//给用户的文件解锁
+uint32_t Deblocking(int tdataid) 
+{
+	sgx_thread_mutex_lock(&wf_mutex);
+	wfilelock->erase(wfilelock->find(tdataid));
+	sgx_thread_mutex_unlock(&wf_mutex);
+	uint32_t re = 1;
+	if (wfilelock->find(tdataid) == wfilelock->end()) re = 0;
+	return re;
+}
 //get encrypt size 为了使要加密的数据长度为16的倍数，所以需要进行数据填充
 uint32_t getEncryptdatalen(int len) {
 	uint32_t size = 0;
@@ -181,14 +191,11 @@ uint32_t FindfileTOuser(uint8_t* data, size_t len, uint8_t *Enuserdata, size_t l
 	if (re != 0) return re;
 	memcpy(&tamp, getendatafromenclave1, sizeof(Tofileenclave));
 	delete[] getendatafromenclave1;
-	//互斥信号量
-	int wtag = 0;
 	//判断用户是否为写请求，若为写则加锁。
 	sgx_thread_mutex_lock(&wf_mutex);
 	int isW=wfilelock->count(tamp.dataid);
 	if (isW == 0) {
 		if (tamp.ac == 2) {
-			wtag = 1;
 			wfilelock->insert(std::pair<int,int>(tamp.dataid,1));
 		}
 	}
@@ -246,13 +253,6 @@ uint32_t FindfileTOuser(uint8_t* data, size_t len, uint8_t *Enuserdata, size_t l
 		//开线程异步写回disk
 		//Updatefileindisk(&re, tamp.dataid, (uint8_t*)userfile->find(tamp.dataid)->second, ENFILELEN);
 		re = AES_Encryptcbc(tamp.userkey.s, SGX_ECP256_KEY_SIZE, userfile->find(tamp.dataid)->second->secret, 1024, Enuserdata);
-	}
-	//写完成，解锁
-	if (wtag== 1) {	
-		gosleep();//睡眠1分钟，模拟用户用写操作该文件。
-		sgx_thread_mutex_lock(&wf_mutex);
-		wfilelock->erase(wfilelock->find(tamp.dataid));
-		sgx_thread_mutex_unlock(&wf_mutex);
 	}
 	return re;
 }

@@ -33,6 +33,11 @@ typedef struct ms_GetdatatoClient_t {
 	size_t ms_Enlen;
 } ms_GetdatatoClient_t;
 
+typedef struct ms_Deblocking_t {
+	uint32_t ms_retval;
+	int ms_tdataid;
+} ms_Deblocking_t;
+
 typedef struct ms_WritebackdatatoDisk_t {
 	uint32_t ms_retval;
 } ms_WritebackdatatoDisk_t;
@@ -48,7 +53,6 @@ typedef struct ms_disp_t {
 	uint8_t* ms_pbuf;
 	size_t ms_len;
 } ms_disp_t;
-
 
 typedef struct ms_Updatefileindisk_t {
 	int ms_retval;
@@ -142,13 +146,6 @@ static sgx_status_t SGX_CDECL Logical_enclave_disp(void* pms)
 	return SGX_SUCCESS;
 }
 
-static sgx_status_t SGX_CDECL Logical_enclave_gosleep(void* pms)
-{
-	if (pms != NULL) return SGX_ERROR_INVALID_PARAMETER;
-	gosleep();
-	return SGX_SUCCESS;
-}
-
 static sgx_status_t SGX_CDECL Logical_enclave_Updatefileindisk(void* pms)
 {
 	ms_Updatefileindisk_t* ms = SGX_CAST(ms_Updatefileindisk_t*, pms);
@@ -239,13 +236,12 @@ static sgx_status_t SGX_CDECL Logical_enclave_sgx_thread_set_multiple_untrusted_
 
 static const struct {
 	size_t nr_ocall;
-	void * func_addr[14];
+	void * func_addr[13];
 } ocall_table_Logical_enclave = {
-	14,
+	13,
 	{
 		(void*)(uintptr_t)Logical_enclave_Encryptusershuju,
 		(void*)(uintptr_t)Logical_enclave_disp,
-		(void*)(uintptr_t)Logical_enclave_gosleep,
 		(void*)(uintptr_t)Logical_enclave_Updatefileindisk,
 		(void*)(uintptr_t)Logical_enclave_TransferRequestToL,
 		(void*)(uintptr_t)Logical_enclave_create_session_ocall,
@@ -312,11 +308,21 @@ sgx_status_t GetdatatoClient(sgx_enclave_id_t eid, uint32_t* retval, int ID, uin
 	return status;
 }
 
+sgx_status_t Deblocking(sgx_enclave_id_t eid, uint32_t* retval, int tdataid)
+{
+	sgx_status_t status;
+	ms_Deblocking_t ms;
+	ms.ms_tdataid = tdataid;
+	status = sgx_ecall(eid, 4, &ocall_table_Logical_enclave, &ms);
+	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
+	return status;
+}
+
 sgx_status_t WritebackdatatoDisk(sgx_enclave_id_t eid, uint32_t* retval)
 {
 	sgx_status_t status;
 	ms_WritebackdatatoDisk_t ms;
-	status = sgx_ecall(eid, 4, &ocall_table_Logical_enclave, &ms);
+	status = sgx_ecall(eid, 5, &ocall_table_Logical_enclave, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
 }

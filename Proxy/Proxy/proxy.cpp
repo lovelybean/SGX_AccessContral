@@ -315,6 +315,7 @@ int Sendaccesstable(int id,int version, char *table, std::streamoff size,uint8_t
 			SSL_write(ssl, (char*)tamp, size + sizeof(fp2s));
 			//接收服务端的响应消息
 			SSL_read(ssl, &re, sizeof(int));
+			free(tamp);
 		}
 		else
 		{
@@ -356,6 +357,7 @@ int Sendaccesstable(int id,int version, char *table, std::streamoff size,uint8_t
 			SSL_write(ssl, (char*)tamp, size + sizeof(p2s));
 			//接收服务端的响应消息
 			SSL_read(ssl, &re, sizeof(int));
+			free(tamp);
 		}
 		if (re!=1)
 		{
@@ -436,12 +438,14 @@ void useractive(SOCKET sockClient, SSL_CTX *ctx) {
 	int Ucount = 0;//用户与代理间同步记号
 	SSL_read(ssl, (char*)&tamp_d, sizeof(user_data));
 	//此处可更改为只传送要修改的内容,让服务端去修改。我这里目前是在proxy端修改完然后全部传送。
-	m.lock();//加锁获取当前用户ID
-	int tampID = id;
-	m.unlock();
+	
 	if (tamp_d.type == 1)
 	{
 		do{
+			m.lock();//加锁获取当前用户ID
+			int tampID = id;
+			id++;
+			m.unlock();
 			std::ifstream in;
 			char buf[1224];
 			in.open("C://Server//cert.pem", std::ios::in | std::ios::binary);
@@ -452,7 +456,7 @@ void useractive(SOCKET sockClient, SSL_CTX *ctx) {
 			printf("\n来自用户：%d的连接\n", tampID);
 			tamp_d.ID = tampID;
 			std::string url = "E:\\Proxy\\" + std::to_string(tampID) + ".txt";
-			out.open(url, std::ios::app | std::ios::binary);
+			out.open(url, std::ios::app |std::ios::binary);
 			std::map<int, int> *useracmap = new std::map<int, int>;
 			for (int i = 0; i < txtlen; i++)
 			{
@@ -464,7 +468,7 @@ void useractive(SOCKET sockClient, SSL_CTX *ctx) {
 			uint8_t *token = new uint8_t[RANDNUMLEN];
 			if (getrandnum(token, RANDNUMLEN) <= 0)
 			{
-				delete[] useracmap;
+				delete useracmap;
 				break;
 			}
 			int tem = Sendaccesstable(tamp_d.ID, Version, senddata, 8 * (useracmap->size()),token);//发送数据到服务端
@@ -474,12 +478,12 @@ void useractive(SOCKET sockClient, SSL_CTX *ctx) {
 				out.write(senddata, 8 * (useracmap->size()));
 				SSL_write(ssl, &tem, sizeof(int));
 				SSL_write(ssl, (char*)&tampID, sizeof(int));//返回客户端ID
-				SSL_write(ssl, (char*)&token, RANDNUMLEN);//客户端去和服务器建立连接的token
+				SSL_write(ssl, (char*)token, RANDNUMLEN);//客户端去和服务器建立连接的token
 				SSL_write(ssl, buf, sizeof(buf));//返回服务器证书
 				out.flush();
 				out.close();
-				delete[] useracmap;
-				tampID += 1;
+				delete useracmap;
+				/*id += 1;*/
 				Version += 1;//计数器加1
 				//写入ID
 				std::fstream fs;
@@ -492,6 +496,8 @@ void useractive(SOCKET sockClient, SSL_CTX *ctx) {
 				fs.write((char*)&Version, sizeof(int));
 				fs.flush();
 				fs.close();
+				delete[] senddata;
+				delete[] token;
 
 			}
 			else
@@ -543,7 +549,7 @@ void useractive(SOCKET sockClient, SSL_CTX *ctx) {
 				SSL_write(ssl, &tem, sizeof(int));
 			}
 			else SSL_write(ssl, &tem, sizeof(int));
-			delete(useracmap);
+			delete useracmap;
 		}
 		else SSL_write(ssl, &tem, sizeof(int));	
 	}

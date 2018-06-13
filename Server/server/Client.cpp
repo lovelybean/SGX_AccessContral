@@ -329,20 +329,32 @@ uint8_t* GetDatafromServer(int ID,int dataid,int ac) {
 				memset(realdata, 0, 1024);
 				aes_decrypt((char*)datafromserver,1024, dh_key, (char*)realdata);
 				delete datafromserver;
+				printf("\n%s\n", (char*)realdata);
+				int writetag = 0;
+				if (ac == 2) {
+					Sleep(5000);
+					writetag = 1;
+					SSL_write(ssl, &writetag, sizeof(int));
+					SSL_write(ssl,&dataid,sizeof(int));		
+				}
+				else
+				{
+					SSL_write(ssl,&writetag,sizeof(int));
+				}
 			}
 		}
 		else if(rsflag==-1)
 		{
-			realdata=(uint8_t*)"\ndon't have permission to access data\n";
+			printf("\ndon't have permission to access data\n");
 		}
 		else if(rsflag==-2)
 		{
 
-			realdata= (uint8_t*)"\nThe Count Value don't match!!!!\n";
+			printf("\nThe Count Value don't match!!!!\n");
 		}
 		else
 		{
-			realdata = (uint8_t*)"\nerror to get data!!!!\n";
+			printf("\nerror to get data!!!!\n");
 		}
 	} while (0);
 	//关闭socket
@@ -406,7 +418,7 @@ void GetScertfromProxy(int way)
 		int id = 0;
 		BIO_read(bio, &id, sizeof(int));
 		//与Server端协商秘钥时使用
-		uint8_t token[16];
+		char token[16];
 		BIO_read(bio,token,sizeof(token));
 
 		char Scert[1224];
@@ -420,7 +432,7 @@ void GetScertfromProxy(int way)
 		out.close();
 		//将token写入本地
 		out.open("E:\\Client\\Token\\" + std::to_string(id) + ".txt",std::ios::app|std::ios::out|std::ios::binary);
-		out.write((char*)token,sizeof(token));
+		out.write(token,sizeof(token));
 		out.flush();
 		out.close();
 		out.open("E:\\Client\\cert.pem",std::ios::app| std::ios::trunc|std::ios::binary);
@@ -494,7 +506,7 @@ void ChangeAC(int id,int dataid,int ac)
 void main()
 {
 	/*GetScertfromProxy(1);*/
-	GetDatafromServer(0,0,1);
-	printf("\n%s\n", (char*)realdata);
+	GetDatafromServer(0,1,1);
+	//printf("\n%s\n", (char*)realdata);
 	system("pause");
 } 

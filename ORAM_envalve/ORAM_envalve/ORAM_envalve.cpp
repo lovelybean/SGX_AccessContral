@@ -747,10 +747,12 @@ uint32_t DetectacData(uint32_t type, uint8_t *data, size_t len, uint8_t * Endata
 			if (vcount == p2data->version) {
 				uint8_t *hashdata;
 				hashdata = linkarray(&p2data->version, sizeof(uint32_t), p2data->data, p2data->datasize);
-				hashdata = linkarray(hashdata,sizeof(uint32_t)+p2data->datasize,p2data->token,sizeof(p2data->token));
+				uint8_t *tamphashdata;
+				tamphashdata = linkarray(hashdata,sizeof(uint32_t)+p2data->datasize,p2data->token,sizeof(p2data->token));
 				sgx_sha256_hash_t dhash;
-				sgx_sha256_msg(hashdata, sizeof(uint32_t) + (p2data->datasize), &dhash);
-				delete hashdata;
+				sgx_sha256_msg(tamphashdata, sizeof(uint32_t) + (p2data->datasize)+sizeof(p2data->token), &dhash);
+				delete[] hashdata;
+				delete[] tamphashdata;
 				printhash(dhash, 32);
 				//计算data、id、vcount的hash来传给客户端，保证代理端提交的信息正确接受,考虑要不要这步。
 				/*uint8_t *s2phash;
@@ -1081,7 +1083,7 @@ int ComputeSharekey(uint8_t *px, uint8_t *py, size_t len) {
 uint32_t JudgeToken(uint8_t *token, size_t len, uint8_t *Entoken, size_t Elen) {
 	uint32_t re = 0;
 	uint8_t unsealdata[16];
-	UnSealdata(Entoken,unsealdata,(uint32_t*)len);
+	UnSealdata(Entoken,unsealdata,(uint32_t*)&len);
 	if (memcmp(token, unsealdata, len)==0) {
 		re=0;
 	}
