@@ -1,21 +1,25 @@
-//°´Î»½øĞĞÒì»òÔËËã
+/******************************
+*use AES-ECB to complete ALL-OR-nothing EncrypteåŠ å¯†ç®—æ³•
+*Author:Pengrui Yao
+*******************************/
+//æŒ‰ä½è¿›è¡Œå¼‚æˆ–è¿ç®—
 void XORcompute(uint8_t *a, uint8_t *b, uint8_t *re, size_t len) {
 	for (int i = 0; i < len; i++) {
 		re[i] = a[i] ^ b[i];
 	}
 }
-//Ê¹ÓÃAONTÓÅ»¯aes_cbc¼ÓÃÜËã·¨
+//ä½¿ç”¨AONTä¼˜åŒ–aes_cbcåŠ å¯†ç®—æ³•
 void AES_EnIntegrateAONT_CBC(uint8_t *plaintext, size_t plaintextlen, uint8_t *key, size_t keylen, uint8_t *Entext) {
 	BIGNUM *randKey;
 	randKey = BN_new();//k'
 	uint8_t *replaintext;//m
 	uint8_t *tampreplaintext;//m'
-	size_t repsize = plaintextlen;//°´ÕÕ16×Ö½ÚÕûÊı±¶²¹È«ºóµÄÊı¾İ³¤¶È
-	BN_rand(randKey, 128, -1, 0);//Ëæ»úÉú³ÉÒ»¸ö128Î»µÄkey
+	size_t repsize = plaintextlen;//æŒ‰ç…§16å­—èŠ‚æ•´æ•°å€è¡¥å…¨åçš„æ•°æ®é•¿åº¦
+	BN_rand(randKey, 128, -1, 0);//éšæœºç”Ÿæˆä¸€ä¸ª128ä½çš„key
 	unsigned char Crandkey[16];
-	BN_bn2bin(randKey, Crandkey);//½«´óÊı×ª»¯³Éunsigned char
-	BN_clear_free(randKey);//ÇåÄÚ´æ
-						   //²¹È«Êı¾İÎª16µÄÕûÊı±¶
+	BN_bn2bin(randKey, Crandkey);//å°†å¤§æ•°è½¬åŒ–æˆunsigned char
+	BN_clear_free(randKey);//æ¸…å†…å­˜
+						   //è¡¥å…¨æ•°æ®ä¸º16çš„æ•´æ•°å€
 	if (plaintextlen % 16 != 0)
 	{
 		repsize = plaintextlen + (16 - (plaintextlen % 16));
@@ -42,11 +46,11 @@ void AES_EnIntegrateAONT_CBC(uint8_t *plaintext, size_t plaintextlen, uint8_t *k
 		memcpy(tamp, &i, sizeof(int));
 		AES_encrypt((const unsigned char*)tamp, tampreplaintext + (16 * i), &tampkey);
 	}
-	//miÓëEk'(i)Òì»òÔËËã,¼ÆËãm'
+	//miä¸Ek'(i)å¼‚æˆ–è¿ç®—,è®¡ç®—m'
 	for (int i = 0; i < (repsize / 16); i++) {
 		XORcompute(replaintext + (16 * i), tampreplaintext + (16 * i), tampreplaintext + (16 * i), 16);
 	}
-	//¼ÆËãhi
+	//è®¡ç®—hi
 	AES_KEY publickey;
 	AES_set_encrypt_key(key, keylen * 8, &publickey);
 	uint8_t *h = new uint8_t[repsize];
@@ -57,7 +61,7 @@ void AES_EnIntegrateAONT_CBC(uint8_t *plaintext, size_t plaintextlen, uint8_t *k
 		XORcompute(tampreplaintext + (16 * i), tamp, h + (16 * i), 16);
 		AES_encrypt(h + (16 * i), h + (16 * i), &publickey);
 	}
-	//¼ÆËãms'
+	//è®¡ç®—ms'
 	uint8_t ms[16];
 	memcpy(ms, Crandkey, sizeof(ms));
 	for (int i = 0; i < (repsize / 16); i++)
@@ -70,9 +74,9 @@ void AES_EnIntegrateAONT_CBC(uint8_t *plaintext, size_t plaintextlen, uint8_t *k
 	delete[] tampreplaintext;
 	delete[] h;
 }
-//AONT½âÃÜËã·¨
+//AONTè§£å¯†ç®—æ³•
 void AES_DeIntegrateAont_CBC(uint8_t *Entext, size_t Entextlen, uint8_t *key, size_t keylen, uint8_t *plaintext) {
-	//¼ÆËãhi
+	//è®¡ç®—hi
 	AES_KEY publickey;
 	AES_set_encrypt_key(key, keylen * 8, &publickey);
 	uint8_t *tampEndata = new uint8_t[Entextlen - 16];
@@ -84,7 +88,7 @@ void AES_DeIntegrateAont_CBC(uint8_t *Entext, size_t Entextlen, uint8_t *key, si
 		XORcompute(Entext + (16 * i), count, tampEndata + (16 * i), 16);
 		AES_encrypt(tampEndata + (16 * i), h + (16 * i), &publickey);
 	}
-	//¼ÆËãk'
+	//è®¡ç®—k'
 	uint8_t tampkey[16];
 	memset(tampkey, 0, sizeof(tampkey));
 	for (int i = 0; i < (Entextlen / 16) - 1; i++) {
@@ -92,7 +96,7 @@ void AES_DeIntegrateAont_CBC(uint8_t *Entext, size_t Entextlen, uint8_t *key, si
 	}
 	XORcompute(tampkey, Entext + (Entextlen - 16), tampkey, 16);
 	delete[] h;
-	//¼ÆËãÃ÷ÎÄ
+	//è®¡ç®—æ˜æ–‡
 	AES_set_encrypt_key(tampkey, sizeof(tampkey) * 8, &publickey);
 	for (int i = 0; i < Entextlen / 16 - 1; i++) {
 		uint8_t tampi[16];
@@ -100,7 +104,7 @@ void AES_DeIntegrateAont_CBC(uint8_t *Entext, size_t Entextlen, uint8_t *key, si
 		memcpy(tampi, &i, sizeof(int));
 		AES_encrypt(tampi, tampEndata + (16 * i), &publickey);
 	}
-	//¼ÆËãÃ÷ÎÄ
+	//è®¡ç®—æ˜æ–‡
 	for (int i = 0; i < Entextlen / 16 - 1; i++) {
 		XORcompute(Entext + (16 * i), tampEndata + (16 * i), plaintext + (16 * i), 16);
 	}
