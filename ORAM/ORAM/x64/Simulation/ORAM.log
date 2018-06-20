@@ -12,8 +12,6 @@ e:\oram\oram\server.cpp(292): warning C4244: “return”: 从“SOCKET”转换
 e:\oram\oram\server.cpp(354): warning C4244: “参数”: 从“SOCKET”转换到“int”，可能丢失数据
 e:\oram\oram\server.cpp(401): warning C4101: “prk”: 未引用的局部变量
 e:\oram\oram\server.cpp(548): warning C4244: “参数”: 从“SOCKET”转换到“int”，可能丢失数据
-e:\oram\oram\server.cpp(769): warning C4267: “参数”: 从“size_t”转换到“const int”，可能丢失数据
-e:\oram\oram\server.cpp(795): warning C4267: “参数”: 从“size_t”转换到“const int”，可能丢失数据
   Enclave_file.cpp
 e:\oram\oram\enclave_file.cpp(115): warning C4244: “初始化”: 从“std::streamoff”转换到“int”，可能丢失数据
 e:\oram\oram\enclave_file.cpp(218): warning C4101: “updatedata”: 未引用的局部变量

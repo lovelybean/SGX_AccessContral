@@ -22,7 +22,7 @@
 #define ECDH_SIZE 33 
 #define MSG_LEN 128
 #define MAXBUF 1024
-#define ENFILELEN 1604
+#define ENFILELEN 1652
 #define P2SDATA 48
 #define FP2SDATA 64
 #define SaveDatasize 580
@@ -430,8 +430,8 @@ void DealClientRequest(SOCKET sockClient,sgx_enclave_id_t eid) {
 		uint8_t DataFromClient[16];
 		SSL_read(ssl,DataFromClient,sizeof(DataFromClient));
 		int result = 1;
-		uint8_t Enuserdata[1024];
-		memset(Enuserdata,0,1024);
+		uint8_t Enuserdata[1040];
+		memset(Enuserdata,0,1040);
 		GetdatatoClient(Feid, (uint32_t*)&result, ID, DataFromClient, sizeof(DataFromClient), Enuserdata, sizeof(Enuserdata));
 		
 		if (result == SGX_SUCCESS) {
@@ -716,82 +716,3 @@ void StartServer()
 
 
 
-//按位进行异或运算
-void XORcompute(uint8_t *a,uint8_t *b,uint8_t *re,size_t len) {
-	for (int i = 0; i < len;i++) {
-		re[i] = a[i] ^ b[i];
-	}
-}
-//使用AONT优化aes_cbc加密算法
-void AES_EnIntegrateAONT_CBC(uint8_t *plaintext,size_t plaintextlen,uint8_t *key,size_t keylen,uint8_t *Entext) {
-	BIGNUM *randKey;
-	randKey = BN_new();//k'
-	uint8_t *replaintext;//m
-	uint8_t *tampreplaintext;//m'
-	size_t repsize = plaintextlen;//按照16字节整数倍补全后的数据长度
-	BN_rand(randKey,128,-1,0);//随机生成一个128位的key
-	unsigned char Crandkey[16];
-	BN_bn2bin(randKey,Crandkey);//将大数转化成unsigned char
-	BN_clear_free(randKey);//清内存
-	//补全数据为16的整数倍
-	if (plaintextlen % 16 != 0) 
-	{
-		repsize = plaintextlen + (16 - (plaintextlen % 16));
-		replaintext = new uint8_t[repsize];
-		tampreplaintext = new uint8_t[repsize];
-		memset(tampreplaintext,0,repsize);
-		memset(replaintext,0,repsize);
-		memcpy(replaintext,plaintext,plaintextlen);
-	}
-	else
-	{
-		replaintext = new uint8_t[repsize];
-		tampreplaintext = new uint8_t[repsize];
-		memset(replaintext, 0, repsize);
-		memset(tampreplaintext, 0, repsize);
-		memcpy(replaintext,plaintext,plaintextlen);
-	}
-	AES_KEY tampkey;
-	AES_set_encrypt_key(Crandkey,128,&tampkey);
-	//Ek'(i)
-	for (int i = 0; i < (repsize/16);i++) {
-		uint8_t tamp[16];
-		memset(tamp,0,sizeof(tamp));
-		memcpy(tamp,&i,sizeof(int));
-		AES_encrypt((const unsigned char*)tamp,tampreplaintext+(16*i),&tampkey);
-	}
-	//mi与Ek'(i)异或运算,计算m'
-	for (int i = 0; i < (repsize / 16); i++) {
-		XORcompute(replaintext+(16*i),tampreplaintext+(16*i),tampreplaintext+(16*i),16);
-	}
-	//计算hi
-	AES_KEY publickey;
-	AES_set_encrypt_key(key,keylen*8,&publickey);
-	uint8_t *h = new uint8_t[repsize];
-	for (int i = 0; i < (repsize / 16); i++) {
-		uint8_t tamp[16];
-		memset(tamp, 0, sizeof(tamp));
-		memcpy(tamp, &i, sizeof(int));
-		XORcompute(tampreplaintext+(16*i),tamp,h+(16*i),16);
-		AES_encrypt(h+(16*i), h + (16 * i),&publickey);
-	}
-	//计算ms'
-	uint8_t ms[16];
-	memcpy(ms,Crandkey,sizeof(ms));
-	for (int i = 0; i < (repsize / 16); i++) 
-	{
-		XORcompute(h+(16*i),ms,ms,16);
-	}
-	memcpy(Entext,tampreplaintext,repsize);
-	memcpy(Entext+repsize,ms,sizeof(ms));
-	delete[] replaintext;
-	delete[] tampreplaintext;
-	delete[] h;
-}
-//AONT解密算法
-void AES_DeIntegrateAont_CBC(uint8_t *Entext,size_t Entextlen,uint8_t *key,size_t keylen,uint8_t *plaintext) {
-	//计算hi
-	AES_KEY publickey;
-	AES_set_encrypt_key(key,keylen*8,&publickey);
-
-}

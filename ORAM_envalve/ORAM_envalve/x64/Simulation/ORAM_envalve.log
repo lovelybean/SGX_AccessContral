@@ -48,6 +48,8 @@ e:\oram_envalve\oram_envalve\oram_envalve.cpp(600): warning C4715: “Buildsecur
     正在创建库 E:\ORAM\x64\Simulation\ORAM_envalve.lib 和对象 E:\ORAM\x64\Simulation\ORAM_envalve.exp
   ORAM_envalve.vcxproj -> E:\ORAM\x64\Simulation\ORAM_envalve.dll
   ORAM_envalve.vcxproj -> E:\ORAM\x64\Simulation\ORAM_envalve.pdb (Full PDB)
+  The required memory is 0x4d4000.
+  Succeed.
   <EnclaveConfiguration>
       <ProdID>0</ProdID>
       <ISVSVN>0</ISVSVN>
@@ -59,5 +61,3 @@ e:\oram_envalve\oram_envalve\oram_envalve.cpp(600): warning C4715: “Buildsecur
       <MiscSelect>0</MiscSelect>
       <MiscMask>0xFFFFFFFF</MiscMask>
   </EnclaveConfiguration>
-  The required memory is 0x4d4000.
-  Succeed.

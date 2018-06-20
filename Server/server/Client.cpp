@@ -119,6 +119,48 @@ int aes_decrypt(char* in,size_t len, unsigned char* key, char* out)
 	AES_cbc_encrypt((unsigned char*)in, (unsigned char*)out, len, &aes, iv, AES_DECRYPT);
 	return 1;
 }
+//按位进行异或运算
+void XORcompute(uint8_t *a, uint8_t *b, uint8_t *re, size_t len) {
+	for (int i = 0; i < len; i++) {
+		re[i] = a[i] ^ b[i];
+	}
+}
+//AONT解密算法
+void AES_DeIntegrateAont_CBC(uint8_t *Entext, size_t Entextlen, uint8_t *key, size_t keylen, uint8_t *plaintext) {
+	//计算hi
+	AES_KEY publickey;
+	AES_set_encrypt_key(key, keylen * 8, &publickey);
+	uint8_t *tampEndata = new uint8_t[Entextlen - 16];
+	uint8_t *h = new uint8_t[Entextlen - 16];
+	for (int i = 0; i < (Entextlen / 16) - 1; i++) {
+		uint8_t count[16];
+		memset(count, 0, 16);
+		memcpy(count, &i, sizeof(int));
+		XORcompute(Entext + (16 * i), count, tampEndata + (16 * i), 16);
+		AES_encrypt(tampEndata + (16 * i), h + (16 * i), &publickey);
+	}
+	//计算k'
+	uint8_t tampkey[16];
+	memset(tampkey, 0, sizeof(tampkey));
+	for (int i = 0; i < (Entextlen / 16) - 1; i++) {
+		XORcompute(tampkey, h + (16 * i), tampkey, 16);
+	}
+	XORcompute(tampkey, Entext + (Entextlen - 16), tampkey, 16);
+	delete[] h;
+	//计算明文
+	AES_set_encrypt_key(tampkey, sizeof(tampkey) * 8, &publickey);
+	for (int i = 0; i < Entextlen / 16 - 1; i++) {
+		uint8_t tampi[16];
+		memset(tampi, 0, 16);
+		memcpy(tampi, &i, sizeof(int));
+		AES_encrypt(tampi, tampEndata + (16 * i), &publickey);
+	}
+	//计算明文
+	for (int i = 0; i < Entextlen / 16 - 1; i++) {
+		XORcompute(Entext + (16 * i), tampEndata + (16 * i), plaintext + (16 * i), 16);
+	}
+	delete[] tampEndata;
+}
 
 uint8_t *genECDHsharedkey(EC_KEY *ecdh, EC_POINT *Serverkey, size_t secret_len)
 
@@ -313,9 +355,9 @@ uint8_t* GetDatafromServer(int ID,int dataid,int ac) {
 		int rsflag = 1;
 		SSL_read(ssl, &rsflag, sizeof(int));
 		if (rsflag == 0) {
-			uint8_t* datafromserver = new uint8_t[1024];
-			memset(datafromserver, 0, 1024);
-			SSL_read(ssl, datafromserver, 1024);
+			uint8_t* datafromserver = new uint8_t[1040];
+			memset(datafromserver, 0, 1040);
+			SSL_read(ssl, datafromserver, 1040);
 			if (strlen((char*)datafromserver) != 0) {
 				Scount++;//将计数器值加1
 				std::fstream fs;
@@ -327,7 +369,8 @@ uint8_t* GetDatafromServer(int ID,int dataid,int ac) {
 				//解密服务端传来数据
 				
 				memset(realdata, 0, 1024);
-				aes_decrypt((char*)datafromserver,1024, dh_key, (char*)realdata);
+				//aes_decrypt((char*)datafromserver,1024, dh_key, (char*)realdata);
+				AES_DeIntegrateAont_CBC(datafromserver,1040,dh_key,Serverpubkeylen,realdata);
 				delete datafromserver;
 				printf("\n%s\n", (char*)realdata);
 				int writetag = 0;
@@ -478,7 +521,7 @@ void ChangeAC(int id,int dataid,int ac)
 	{
 		printf("client fail to connect to proxy\n");
 	}
-	else {
+	else { 
 		if (SSL_get_verify_result(ssl) != X509_V_OK)
 		{
 			printf("proxy cert not true!!!!!!");
@@ -506,7 +549,7 @@ void ChangeAC(int id,int dataid,int ac)
 void main()
 {
 	/*GetScertfromProxy(1);*/
-	GetDatafromServer(0,1,1);
+	GetDatafromServer(0,0,2);
 	//printf("\n%s\n", (char*)realdata);
 	system("pause");
 } 
