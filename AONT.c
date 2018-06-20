@@ -1,6 +1,7 @@
 /******************************
 *use AES-ECB to complete ALL-OR-nothing Encrypte加密算法
 *Author:Pengrui Yao
+*time:2018.6.20
 *******************************/
 //按位进行异或运算
 void XORcompute(uint8_t *a, uint8_t *b, uint8_t *re, size_t len) {
